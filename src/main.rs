@@ -23,7 +23,12 @@ fn main() {
     let mut listen_fd = ListenFd::from_env();
     let mut server = HttpServer::new(|| {
         App::new()
-            .service({ web::scope("/api").route("/get", web::to(get)) })
+            .service({
+                web::scope("/api").route("/get", web::to(get)).route(
+                    "/closures",
+                    web::to(|| HttpResponse::Ok().body("response from closures")),
+                )
+            })
             .service(index3)
             .route("/", web::get().to(index))
             .route("/again", web::get().to(index2))
