@@ -12,13 +12,18 @@ fn index2() -> impl Responder {
 
 #[get("/hello")]
 fn index3() -> impl Responder {
-    return HttpResponse::Ok().body("hello world third time!");
+    HttpResponse::Ok().body("hello world third time!")
+}
+
+fn get() -> impl Responder {
+    HttpResponse::Ok().body("/api/get")
 }
 
 fn main() {
     let mut listen_fd = ListenFd::from_env();
     let mut server = HttpServer::new(|| {
         App::new()
+            .service({ web::scope("/api").route("/get", web::to(get)) })
             .service(index3)
             .route("/", web::get().to(index))
             .route("/again", web::get().to(index2))
