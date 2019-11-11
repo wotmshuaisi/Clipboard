@@ -19,6 +19,13 @@ fn get() -> impl Responder {
     HttpResponse::Ok().body("/api/get")
 }
 
+fn set_router(cfg: &mut web::ServiceConfig) {
+    cfg.route(
+        "/try",
+        web::get().to(|| HttpResponse::Ok().body("test try")),
+    );
+}
+
 fn main() {
     let mut listen_fd = ListenFd::from_env();
     let mut server = HttpServer::new(|| {
@@ -38,6 +45,7 @@ fn main() {
                         "/closures",
                         web::to(|| HttpResponse::Ok().body("response from closures")),
                     )
+                    .configure(set_router)
             })
             .service(index3)
             .route("/", web::get().to(index))
