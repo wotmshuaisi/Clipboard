@@ -385,7 +385,9 @@ name = "clipboard"
 version = "0.1.0"
 dependencies = [
  "actix-web 1.0.8 (registry+https://github.com/rust-lang/crates.io-index)",
+ "futures 0.1.29 (registry+https://github.com/rust-lang/crates.io-index)",
  "listenfd 0.3.3 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde 1.0.102 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]

@@ -1,61 +1,11 @@
-use actix_web::get;
-use actix_web::{guard, web, App, HttpResponse, HttpServer, Responder};
-use listenfd::ListenFd;
+use actix_web::{App, HttpServer};
 
-fn index() -> impl Responder {
-    return HttpResponse::Ok().body("hello world!");
-}
-
-fn index2() -> impl Responder {
-    return HttpResponse::Ok().body("hello world again!");
-}
-
-#[get("/hello")]
-fn index3() -> impl Responder {
-    HttpResponse::Ok().body("hello world third time!")
-}
-
-fn get() -> impl Responder {
-    HttpResponse::Ok().body("/api/get")
-}
-
-fn set_router(cfg: &mut web::ServiceConfig) {
-    cfg.route(
-        "/try",
-        web::get().to(|| HttpResponse::Ok().body("test try")),
-    );
-}
+mod api;
 
 fn main() {
-    let mut listen_fd = ListenFd::from_env();
-    let mut server = HttpServer::new(|| {
-        App::new()
-            .service({
-                web::scope("/api")
-                    .service(
-                        web::scope("/domainonly")
-                            .guard(guard::Header("Host", "localhost:8000"))
-                            .route(
-                                "/test",
-                                web::to(|| HttpResponse::Ok().body("domain name only")),
-                            ),
-                    )
-                    .route("/get", web::to(get))
-                    .route(
-                        "/closures",
-                        web::to(|| HttpResponse::Ok().body("response from closures")),
-                    )
-                    .configure(set_router)
-            })
-            .service(index3)
-            .route("/", web::get().to(index))
-            .route("/again", web::get().to(index2))
-    });
-    server = if let Some(l) = listen_fd.take_tcp_listener(0).unwrap() {
-        server.listen(l).unwrap()
-    } else {
-        server.bind("localhost:8000").unwrap()
-    };
-
-    server.run().unwrap();
+    HttpServer::new(move || App::new().configure(api::set_api_router))
+        .bind("0.0.0.0:8000")
+        .unwrap()
+        .run()
+        .unwrap();
 }

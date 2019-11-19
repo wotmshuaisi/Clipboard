@@ -8,4 +8,6 @@ edition = "2018"
 
 [dependencies]
 actix-web = "1.0.8"
+futures = "0.1.29"
 listenfd = "0.3.3"
+serde = "1.0.102"
