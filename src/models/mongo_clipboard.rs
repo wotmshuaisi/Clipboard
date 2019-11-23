@@ -1,5 +1,4 @@
 use crate::models;
-use std::error::Error;
 
 pub struct Clipboard {
     id: String,
