@@ -1,15 +1,19 @@
 use actix_web::{App, HttpServer};
 
-#[macro_use]
-extern crate slog;
-extern crate slog_async;
-extern crate slog_scope;
-extern crate slog_term;
+use mongodb::db::ThreadedDatabase;
+use mongodb::{bson, doc, Bson};
+use mongodb::{Client, ThreadedClient};
 
 mod api;
 mod logging;
 mod models;
 mod utils;
+
+#[macro_use]
+extern crate slog;
+extern crate slog_async;
+extern crate slog_scope;
+extern crate slog_term;
 
 const DEFAULT_LOG_PATH: &str = "./log/";
 const DEBUG_MODE: &str = "DEBUG";
@@ -34,6 +38,7 @@ fn main() {
     /* Initialization */
     let (_guard, logger) = initial_logger(env_mode, env_log_path);
     let _ = models::new();
+    initial_mongo();
     /* Operations */
     HttpServer::new(move || {
         App::new()
@@ -61,4 +66,14 @@ fn initial_logger(mode: String, log_path: String) -> (slog_scope::GlobalLoggerGu
             utils::new_logger(log_path.clone() + "http.log", "http", true),
         ),
     }
+}
+
+fn initial_mongo() {
+    let client = mongodb::Client::connect("localhost", 27017).unwrap();
+    let test_db = client.db("test");
+    // test connection
+    test_db
+        .create_collection("test_conn_by_clipboard", None)
+        .unwrap();
+    test_db.drop_collection("test_conn_by_clipboard").unwrap();
 }
