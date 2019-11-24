@@ -51,14 +51,14 @@ fn initial_logger(mode: String, log_path: String) -> (slog_scope::GlobalLoggerGu
     let logger = utils::new_logger(log_path.clone() + "main.log", "main", false);
     let _guard = slog_scope::set_global_logger(logger.clone());
 
-    if mode == RELEASE_MODE {
-        return (
+    match mode.as_str() {
+        RELEASE_MODE => (
             _guard,
             utils::new_logger(log_path.clone() + "http.log", "http", false),
-        );
+        ),
+        _ => (
+            _guard,
+            utils::new_logger(log_path.clone() + "http.log", "http", true),
+        ),
     }
-    (
-        _guard,
-        utils::new_logger(log_path.clone() + "http.log", "http", true),
-    )
 }
