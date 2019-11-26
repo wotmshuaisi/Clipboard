@@ -8,7 +8,7 @@ pub fn new_logger(path: String, thread: &str, plain: bool) -> slog::Logger {
     let log_file = std::fs::OpenOptions::new()
         .create(true)
         .write(true)
-        .truncate(true)
+        .append(true)
         .open(path.to_string())
         .expect(&(String::from("Failed to create file: ").to_string() + &path));
 
