@@ -1,8 +1,6 @@
 use actix_web::{App, HttpServer};
-
 use mongodb::db::ThreadedDatabase;
-use mongodb::{bson, doc, Bson};
-use mongodb::{Client, ThreadedClient};
+use mongodb::ThreadedClient;
 
 mod api;
 mod logging;
@@ -18,27 +16,23 @@ extern crate slog_term;
 const DEFAULT_LOG_PATH: &str = "./log/";
 const DEBUG_MODE: &str = "DEBUG";
 const RELEASE_MODE: &str = "RELEASE";
+const MONGO_ADDR: &str = "mongodb://127.0.0.1:27017/admin";
 
 fn main() {
     /* Variables */
-    let env_mode = match std::env::var("MODE") {
-        Ok(val) => {
-            if val.to_uppercase() == "RELEASE" {
-                String::from(RELEASE_MODE)
-            } else {
-                String::from(DEBUG_MODE)
-            }
+    let env_log_path = utils::get_env("LOG_PATH", DEFAULT_LOG_PATH);
+    let env_mongo_addr = utils::get_env("MONGO_ADDR", MONGO_ADDR);
+    let env_mode = |x: String| -> String {
+        if &x == RELEASE_MODE {
+            x
+        } else {
+            String::from(DEBUG_MODE)
         }
-        Err(_) => String::from(DEBUG_MODE),
-    };
-    let env_log_path = match std::env::var("LOG_PATH") {
-        Ok(val) => val,
-        Err(_) => String::from(DEFAULT_LOG_PATH),
-    };
+    }(utils::get_env("MODE", DEBUG_MODE).to_uppercase());
     /* Initialization */
     let (_guard, logger) = initial_logger(env_mode, env_log_path);
-    let _ = models::new();
-    initial_mongo();
+    let mongo_client = initial_mongo(env_mongo_addr);
+    let _ = models::new(mongo_client.clone());
     /* Operations */
     HttpServer::new(move || {
         App::new()
@@ -68,12 +62,19 @@ fn initial_logger(mode: String, log_path: String) -> (slog_scope::GlobalLoggerGu
     }
 }
 
-fn initial_mongo() {
-    let client = mongodb::Client::connect("localhost", 27017).unwrap();
-    let test_db = client.db("test");
+fn initial_mongo(mongo_addr: String) -> mongodb::Client {
+    let client = mongodb::Client::with_uri(mongo_addr.as_ref()).unwrap();
     // test connection
-    test_db
-        .create_collection("test_conn_by_clipboard", None)
-        .unwrap();
-    test_db.drop_collection("test_conn_by_clipboard").unwrap();
+    match client.db("clipboard").version() {
+        Ok(version) => {
+            info!(
+                slog_scope::logger(),
+                "mongodb version: {}.{}.{}", version.major, version.minor, version.patch
+            );
+        }
+        Err(err) => {
+            panic!("[{}] - initial_mongo", err);
+        }
+    };
+    client
 }
