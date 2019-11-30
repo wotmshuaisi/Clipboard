@@ -30,9 +30,9 @@ fn main() {
         }
     }(utils::get_env("MODE", DEBUG_MODE).to_uppercase());
     /* Initialization */
-    let (_guard, logger) = initial_logger(env_mode, env_log_path);
-    let mongo_client = initial_mongo(env_mongo_addr);
-    let _ = models::new(mongo_client.clone());
+    let (_guard, logger) = initial_logger(&env_mode, &env_log_path);
+    let mongo_client = initial_mongo(&env_mongo_addr);
+    let _models: models::ModelHandler = models::ClipboardModel::new(mongo_client.clone());
     /* Operations */
     HttpServer::new(move || {
         App::new()
@@ -46,24 +46,27 @@ fn main() {
 }
 
 // set up global logger & http logger
-fn initial_logger(mode: String, log_path: String) -> (slog_scope::GlobalLoggerGuard, slog::Logger) {
-    let logger = utils::new_logger(log_path.clone() + "main.log", "main", false);
-    let _guard = slog_scope::set_global_logger(logger.clone());
+fn initial_logger(mode: &str, log_path: &str) -> (slog_scope::GlobalLoggerGuard, slog::Logger) {
+    let _guard = slog_scope::set_global_logger(utils::new_logger(
+        String::from(log_path) + "main.log",
+        "main",
+        false,
+    ));
 
-    match mode.as_str() {
+    match mode {
         RELEASE_MODE => (
             _guard,
-            utils::new_logger(log_path.clone() + "http.log", "http", false),
+            utils::new_logger(String::from(log_path) + "http.log", "http", false),
         ),
         _ => (
             _guard,
-            utils::new_logger(log_path.clone() + "http.log", "http", true),
+            utils::new_logger(String::from(log_path) + "http.log", "http", true),
         ),
     }
 }
 
-fn initial_mongo(mongo_addr: String) -> mongodb::Client {
-    let client = mongodb::Client::with_uri(mongo_addr.as_ref()).unwrap();
+fn initial_mongo(mongo_addr: &str) -> mongodb::Client {
+    let client = mongodb::Client::with_uri(mongo_addr).unwrap();
     // test connection
     match client.db("clipboard").version() {
         Ok(version) => {
