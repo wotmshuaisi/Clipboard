@@ -17,4 +17,5 @@ slog-term = "2.4.2"
 slog-async = "2.3.0"
 slog-scope = "4.3.0"
 chrono = "0.4.9"
-mongodb = {git = "https://github.com/Devolutions/mongo-rust-driver-prototype"}
+bson = "0.14.0"
+mongodb = { package = "mongodb_cwal", version = "0.4" }
