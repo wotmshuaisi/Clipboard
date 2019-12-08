@@ -33,6 +33,10 @@ impl ModelHandler {
             "{} [MD_FN:{} I:{}]", err, model_func_name, index,
         )
     }
+
+    pub fn warn_log(&self, model_func_name: &str, index: i8) {
+        warn!(self.logger, "[MD_FN:{} I:{}]", model_func_name, index,)
+    }
 }
 
 /* Test code */

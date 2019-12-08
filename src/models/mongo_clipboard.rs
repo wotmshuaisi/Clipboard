@@ -94,7 +94,7 @@ impl models::ClipboardModel for models::ModelHandler {
         ) {
             Ok(val) => {
                 if !val.inserted_id.is_some() {
-                    self.err_log("ClipboardModel create_clipboard", 1, "");
+                    self.warn_log("ClipboardModel create_clipboard", 1);
                 }
                 Ok(cid)
             }
@@ -106,28 +106,42 @@ impl models::ClipboardModel for models::ModelHandler {
     }
 
     fn destroy_clipboard(&self, id: &str) -> Result<(), Box<dyn Error>> {
-        Ok(())
+        match self.db.collection(CLIPBOARD_COLLECTION_NAME).delete_one(
+            doc! {
+                "id": id,
+            },
+            None,
+        ) {
+            Ok(val) => {
+                if val.deleted_count == 0 {
+                    self.warn_log("ClipboardModel destroy_clipboard", 0);
+                }
+                Ok(())
+            }
+            Err(err) => Err(Box::new(err)),
+        }
     }
 
     fn retrieve_clipboard(&self) {}
 }
 
 #[test]
-fn create_clipboard_test() {
+fn clipboard_test() {
     use crate::models::{ClipboardModel, CreateClipboard};
 
     let m = models::initial_test_handler();
-    let result = m
-        .create_clipboard(CreateClipboard {
-            clip_content: String::from("test"),
-            clip_onetime: true,
-            clip_type: ClipboardType::Normal,
-            is_lock: false,
-            password: None,
-        })
-        .unwrap();
+    // let result = m
+    //     .create_clipboard(CreateClipboard {
+    //         clip_content: String::from("test"),
+    //         clip_onetime: true,
+    //         clip_type: ClipboardType::Normal,
+    //         is_lock: false,
+    //         password: None,
+    //     })
+    //     .unwrap();
 
-    assert_ne!(result, "");
+    // assert_ne!(result, "");
+
     // password content
     let pass = "password";
     let result = m
@@ -141,4 +155,9 @@ fn create_clipboard_test() {
         .unwrap();
 
     assert_ne!(result, "");
+
+    // delete clipboard
+    let result = m.destroy_clipboard(&result);
+
+    assert_eq!(result.is_ok(), true);
 }
