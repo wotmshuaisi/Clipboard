@@ -17,11 +17,13 @@ const DEFAULT_LOG_PATH: &str = "./log/";
 const DEBUG_MODE: &str = "DEBUG";
 const RELEASE_MODE: &str = "RELEASE";
 const MONGO_ADDR: &str = "mongodb://127.0.0.1:27017/admin";
+const APP_SALT: &str = "saltforbcrypt";
 
 fn main() {
     /* Variables */
     let env_log_path = utils::get_env("LOG_PATH", DEFAULT_LOG_PATH);
     let env_mongo_addr = utils::get_env("MONGO_ADDR", MONGO_ADDR);
+    let env_app_salt = utils::get_env("APP_SALT", APP_SALT);
     let env_mode = |x: String| -> String {
         if &x == RELEASE_MODE {
             x
@@ -32,7 +34,10 @@ fn main() {
     /* Initialization */
     let (_guard, logger) = initial_logger(&env_mode, &env_log_path);
     let mongo_client = initial_mongo(&env_mongo_addr);
-    let _models: models::ModelHandler = models::ClipboardModel::new(mongo_client.clone());
+    let _models: models::ModelHandler = models::ClipboardModel::new(models::ModelHandlerOptions {
+        conn: mongo_client.clone(),
+        key: env_app_salt,
+    });
     /* Operations */
     HttpServer::new(move || {
         App::new()
