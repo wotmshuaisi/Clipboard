@@ -10,7 +10,7 @@ pub trait ClipboardModel {
     fn new(opt: models::ModelHandlerOptions) -> Self;
     fn create_clipboard(&self, c: models::CreateClipboard) -> Result<String, Box<dyn Error>>;
     fn destroy_clipboard(&self, id: &str) -> Result<(), Box<dyn Error>>;
-    fn retrieve_clipboard(&self);
+    fn retrieve_clipboard(&self, id: &str) -> Result<Option<models::Clipboard>, Box<dyn Error>>;
 }
 
 pub struct ModelHandler {

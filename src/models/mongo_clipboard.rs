@@ -1,4 +1,5 @@
 use mongodb::db::ThreadedDatabase;
+use mongodb::ordered::OrderedDocument;
 use mongodb::{bson, doc, Bson, ThreadedClient};
 use std::error::Error;
 
@@ -16,6 +17,7 @@ const ID_ALPHABETS: [char; 62] = [
     'V', 'W', 'X', 'Y', 'Z',
 ];
 
+#[derive(Debug)]
 pub enum ClipboardType {
     Normal,
     Markdown,
@@ -30,6 +32,17 @@ pub struct CreateClipboard {
     pub password: Option<String>,
     // pub uid: Option<String>,
     // pub syntx_lang: Option<String>,
+}
+
+#[derive(Debug)]
+pub struct Clipboard {
+    pub id: String,
+    pub clip_type: ClipboardType,
+    pub clip_content: String,
+    pub clip_onetime: bool,
+    pub is_lock: bool,
+    pub password: String,
+    pub date_time: i64,
 }
 
 impl models::ClipboardModel for models::ModelHandler {
@@ -84,11 +97,11 @@ impl models::ClipboardModel for models::ModelHandler {
                 .duration_since(std::time::SystemTime::UNIX_EPOCH)
                 .unwrap()
                 .as_secs() as i64,
-                                            "clip_type": match c.clip_type {
-                                                ClipboardType::Normal => 0,
-                                                ClipboardType::Markdown => 1,
-                                                // ClipboardType::Synatx => 2,
-                                            },
+                "clip_type": match c.clip_type {
+                    ClipboardType::Normal => 0,
+                    ClipboardType::Markdown => 1,
+                    // ClipboardType::Synatx => 2,
+                },
             },
             None,
         ) {
@@ -122,7 +135,69 @@ impl models::ClipboardModel for models::ModelHandler {
         }
     }
 
-    fn retrieve_clipboard(&self) {}
+    fn retrieve_clipboard(&self, id: &str) -> Result<Option<Clipboard>, Box<dyn Error>> {
+        match self.db.collection(CLIPBOARD_COLLECTION_NAME).find_one(
+            Some(doc! {
+                "id": id,
+            }),
+            None,
+        ) {
+            Ok(val) => {
+                if let Some(item) = val {
+                    Ok(Some(Clipboard {
+                        id: String::from(String::from(
+                            item.get_str("id").unwrap_or_else(|_| Default::default()),
+                        )),
+                        is_lock: item
+                            .get_bool("is_lock")
+                            .unwrap_or_else(|_| Default::default()),
+                        date_time: item
+                            .get_i64("date_time")
+                            .unwrap_or_else(|_| Default::default()),
+                        clip_onetime: item
+                            .get_bool("clip_onetime")
+                            .unwrap_or_else(|_| Default::default()),
+                        password: String::from(
+                            item.get_str("password")
+                                .unwrap_or_else(|_| Default::default()),
+                        ),
+                        clip_type: match item.get_i32("clip_type").unwrap() {
+                            0 => ClipboardType::Normal,
+                            1 => ClipboardType::Markdown,
+                            _ => ClipboardType::Normal,
+                        },
+                        clip_content: match item.get_binary_generic("clip_content") {
+                            Ok(val) => {
+                                let iv = item.get_str("iv");
+                                if let Ok(iv) = iv {
+                                    match utils::from_aes(&self.key, iv.as_bytes(), val) {
+                                        Ok(val) => val,
+                                        Err(err) => {
+                                            self.err_log(
+                                                "ClipboardModel retrieve_clipboard",
+                                                1,
+                                                &err.to_string(),
+                                            );
+                                            return Err(err);
+                                        }
+                                    }
+                                } else {
+                                    String::from("")
+                                }
+                            }
+                            Err(_) => String::from(""),
+                        },
+                    }))
+                } else {
+                    Ok(None)
+                }
+            }
+            Err(err) => {
+                self.err_log("ClipboardModel retrieve_clipboard", 0, &err.to_string());
+                Err(Box::new(err))
+            }
+        }
+    }
 }
 
 #[test]
@@ -142,7 +217,7 @@ fn clipboard_test() {
 
     // assert_ne!(result, "");
 
-    // password content
+    // // password content
     let pass = "password";
     let result = m
         .create_clipboard(CreateClipboard {
@@ -156,7 +231,22 @@ fn clipboard_test() {
 
     assert_ne!(result, "");
 
-    // delete clipboard
+    // retrieve clipboard
+    let doc = m.retrieve_clipboard(&result).unwrap();
+    if let Some(doc) = doc {
+        assert_ne!("", &doc.id);
+        assert_eq!("test 1", &doc.clip_content);
+        assert_eq!(true, doc.is_lock);
+        assert_ne!(0, doc.date_time);
+        let doc_type = match doc.clip_type {
+            ClipboardType::Normal => 0,
+            ClipboardType::Markdown => 1,
+            _ => -1,
+        };
+        assert_eq!(doc_type, 0);
+    }
+
+    // // delete clipboard
     let result = m.destroy_clipboard(&result);
 
     assert_eq!(result.is_ok(), true);

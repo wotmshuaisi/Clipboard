@@ -9,9 +9,14 @@ pub fn to_aes(key: &[u8], content: &[u8]) -> Result<(String, Vec<u8>), Box<dyn s
     }
 }
 
-pub fn from_aes(key: &[u8], iv: &[u8], data: &[u8]) -> String {
-    let ciphertext = decrypt(Cipher::aes_256_cbc(), key, Some(iv), data).unwrap();
-    String::from_utf8(ciphertext).unwrap()
+pub fn from_aes(key: &[u8], iv: &[u8], data: &[u8]) -> Result<String, Box<dyn std::error::Error>> {
+    match decrypt(Cipher::aes_256_cbc(), key, Some(iv), data) {
+        Ok(val) => match String::from_utf8(val) {
+            Ok(v) => Ok(v),
+            Err(err) => Err(Box::new(err)),
+        },
+        Err(err) => Err(Box::new(err)),
+    }
 }
 
 /* Test code */
@@ -25,5 +30,5 @@ fn encrypt_and_decrypt() {
 
     let data_decrypted = from_aes(&key, iv.as_bytes(), &content);
 
-    assert_eq!(data, data_decrypted.as_str());
+    assert_eq!(data, data_decrypted.unwrap().as_str());
 }
