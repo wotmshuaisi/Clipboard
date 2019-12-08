@@ -1,7 +1,7 @@
 use mongodb::db::ThreadedDatabase;
-use mongodb::ordered::OrderedDocument;
 use mongodb::{bson, doc, Bson, ThreadedClient};
 use std::error::Error;
+use std::time::{SystemTime, UNIX_EPOCH};
 
 extern crate bcrypt;
 extern crate serde;
@@ -30,6 +30,7 @@ pub struct CreateClipboard {
     pub clip_onetime: bool,
     pub is_lock: bool,
     pub password: Option<String>,
+    pub expire_date: i64,
     // pub uid: Option<String>,
     // pub syntx_lang: Option<String>,
 }
@@ -42,6 +43,7 @@ pub struct Clipboard {
     pub clip_onetime: bool,
     pub is_lock: bool,
     pub password: String,
+    pub expire_date: i64,
     pub date_time: i64,
 }
 
@@ -93,8 +95,8 @@ impl models::ClipboardModel for models::ModelHandler {
                     Some(val) => val,
                     None=> Default::default()
                 },
-                "date_time":std::time::SystemTime::now()
-                .duration_since(std::time::SystemTime::UNIX_EPOCH)
+                "date_time": SystemTime::now()
+                .duration_since( UNIX_EPOCH)
                 .unwrap()
                 .as_secs() as i64,
                 "clip_type": match c.clip_type {
@@ -153,6 +155,9 @@ impl models::ClipboardModel for models::ModelHandler {
                             .unwrap_or_else(|_| Default::default()),
                         date_time: item
                             .get_i64("date_time")
+                            .unwrap_or_else(|_| Default::default()),
+                        expire_date: item
+                            .get_i64("expire_date")
                             .unwrap_or_else(|_| Default::default()),
                         clip_onetime: item
                             .get_bool("clip_onetime")
@@ -226,6 +231,11 @@ fn clipboard_test() {
             clip_type: ClipboardType::Normal,
             is_lock: true,
             password: Some(String::from(pass)),
+            expire_date: SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap()
+                .as_secs() as i64
+                + (5 * 24 * 3600) as i64,
         })
         .unwrap();
 
@@ -241,7 +251,6 @@ fn clipboard_test() {
         let doc_type = match doc.clip_type {
             ClipboardType::Normal => 0,
             ClipboardType::Markdown => 1,
-            _ => -1,
         };
         assert_eq!(doc_type, 0);
     }
