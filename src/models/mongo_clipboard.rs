@@ -4,7 +4,6 @@ use std::error::Error;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 extern crate bcrypt;
-extern crate serde;
 
 use crate::models;
 use crate::utils;

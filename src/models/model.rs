@@ -2,8 +2,6 @@ use std::error::Error;
 
 use crate::models;
 
-extern crate serde;
-
 /* Interface & Structures */
 
 pub trait ClipboardModel {
