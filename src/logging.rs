@@ -76,7 +76,10 @@ where
                 res.request().method(),
                 res.request().uri(),
                 res.status().as_u16(),
-                (chrono::Utc::now() - start_time).num_milliseconds(),
+                match (chrono::Utc::now() - start_time).num_nanoseconds() {
+                    Some(val) => val as f64 / 1000000.0,
+                    _ => 0.0 as f64,
+                }
             );
 
             match res.status().as_u16() < 400 {
