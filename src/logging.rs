@@ -1,15 +1,12 @@
+use std::cell::RefCell;
+use std::pin::Pin;
+use std::rc::Rc;
+use std::task::{Context, Poll};
+
 use actix_service::{Service, Transform};
 use actix_web::{dev::ServiceRequest, dev::ServiceResponse, Error};
-use futures::future::{ok, FutureResult};
-use futures::{Future, Poll};
-use slog::info;
+use futures::future::{ok, Future, Ready};
 
-// original source: https://gist.github.com/dimfeld/189053f1307682524739df8387636daa
-
-// There are two step in middleware processing.
-// 1. Middleware initialization, middleware factory get called with
-//    next service in chain as parameter.
-// 2. Middleware's call method get called with normal request.
 pub struct Logging {
     logger: slog::Logger,
 }
@@ -20,10 +17,7 @@ impl Logging {
     }
 }
 
-// Middleware factory is `Transform` trait from actix-service crate
-// `S` - type of the next service
-// `B` - type of response's body
-impl<S, B> Transform<S> for Logging
+impl<S: 'static, B> Transform<S> for Logging
 where
     S: Service<Request = ServiceRequest, Response = ServiceResponse<B>, Error = Error>,
     S::Future: 'static,
@@ -34,42 +28,44 @@ where
     type Error = Error;
     type InitError = ();
     type Transform = LoggingMiddleware<S>;
-    type Future = FutureResult<Self::Transform, Self::InitError>;
+    type Future = Ready<Result<Self::Transform, Self::InitError>>;
 
     fn new_transform(&self, service: S) -> Self::Future {
         ok(LoggingMiddleware {
-            service,
+            service: Rc::new(RefCell::new(service)),
             logger: self.logger.clone(),
         })
     }
 }
 
 pub struct LoggingMiddleware<S> {
-    service: S,
+    // This is special: We need this to avoid lifetime issues.
+    service: Rc<RefCell<S>>,
     logger: slog::Logger,
 }
 
 impl<S, B> Service for LoggingMiddleware<S>
 where
-    S: Service<Request = ServiceRequest, Response = ServiceResponse<B>, Error = Error>,
+    S: Service<Request = ServiceRequest, Response = ServiceResponse<B>, Error = Error> + 'static,
     S::Future: 'static,
     B: 'static,
 {
     type Request = ServiceRequest;
     type Response = ServiceResponse<B>;
     type Error = Error;
-    type Future = Box<dyn Future<Item = Self::Response, Error = Self::Error>>;
+    type Future = Pin<Box<dyn Future<Output = Result<Self::Response, Self::Error>>>>;
 
-    fn poll_ready(&mut self) -> Poll<(), Self::Error> {
-        self.service.poll_ready()
+    fn poll_ready(&mut self, cx: &mut Context) -> Poll<Result<(), Self::Error>> {
+        self.service.poll_ready(cx)
     }
 
     fn call(&mut self, req: ServiceRequest) -> Self::Future {
         let start_time = chrono::Utc::now();
+        let mut svc = self.service.clone();
         let logger = self.logger.clone();
 
-        Box::new(self.service.call(req).and_then(move |res| {
-            let end_time = chrono::Utc::now();
+        Box::pin(async move {
+            let res = svc.call(req).await?;
 
             let log = format!(
                 "[clientip: {}] [method: {}] [url: {}] [status: {}] [latency: {}]",
@@ -80,7 +76,7 @@ where
                 res.request().method(),
                 res.request().uri(),
                 res.status().as_u16(),
-                (end_time - start_time).num_milliseconds(),
+                (chrono::Utc::now() - start_time).num_milliseconds(),
             );
 
             match res.status().as_u16() < 400 {
@@ -93,6 +89,6 @@ where
             };
 
             Ok(res)
-        }))
+        })
     }
 }
