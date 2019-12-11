@@ -18,9 +18,19 @@ const ID_ALPHABETS: [char; 62] = [
 
 #[derive(Debug)]
 pub enum ClipboardType {
-    Normal,
-    Markdown,
+    Normal = 1,
+    Markdown = 2,
     // Synatx,
+}
+
+impl ClipboardType {
+    pub fn from_u8(value: u8) -> ClipboardType {
+        match value {
+            1 => ClipboardType::Normal,
+            2 => ClipboardType::Markdown,
+            _ => panic!("Unknown value: {}", value),
+        }
+    }
 }
 
 pub struct CreateClipboard {
@@ -98,11 +108,7 @@ impl models::ClipboardModel for models::ModelHandler {
                 .duration_since( UNIX_EPOCH)
                 .unwrap()
                 .as_secs() as i64,
-                "clip_type": match c.clip_type {
-                    ClipboardType::Normal => 0,
-                    ClipboardType::Markdown => 1,
-                    // ClipboardType::Synatx => 2,
-                },
+                "clip_type": c.clip_type as i32,
             },
             None,
         ) {
@@ -165,11 +171,7 @@ impl models::ClipboardModel for models::ModelHandler {
                             item.get_str("password")
                                 .unwrap_or_else(|_| Default::default()),
                         ),
-                        clip_type: match item.get_i32("clip_type").unwrap() {
-                            0 => ClipboardType::Normal,
-                            1 => ClipboardType::Markdown,
-                            _ => ClipboardType::Normal,
-                        },
+                        clip_type: ClipboardType::from_u8(item.get_i32("clip_type").unwrap() as u8),
                         clip_content: match item.get_binary_generic("clip_content") {
                             Ok(val) => {
                                 let iv = item.get_str("iv");
@@ -247,11 +249,7 @@ fn clipboard_test() {
         assert_eq!("test 1", &doc.clip_content);
         assert_eq!(true, doc.is_lock);
         assert_ne!(0, doc.date_time);
-        let doc_type = match doc.clip_type {
-            ClipboardType::Normal => 0,
-            ClipboardType::Markdown => 1,
-        };
-        assert_eq!(doc_type, 0);
+        assert_eq!(doc.clip_type as u8, 1);
     }
 
     // // delete clipboard
