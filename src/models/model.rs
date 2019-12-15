@@ -1,3 +1,4 @@
+use std::clone::Clone;
 use std::error::Error;
 
 use crate::models;
@@ -11,6 +12,7 @@ pub trait ClipboardModel {
     fn retrieve_clipboard(&self, id: &str) -> Result<Option<models::Clipboard>, Box<dyn Error>>;
 }
 
+#[derive(Clone, Debug)]
 pub struct ModelHandler {
     pub db: mongodb::db::Database,
     pub logger: slog::Logger,

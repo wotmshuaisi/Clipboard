@@ -24,11 +24,11 @@ pub enum ClipboardType {
 }
 
 impl ClipboardType {
-    pub fn from_u8(value: u8) -> ClipboardType {
+    pub fn from_u8(value: u8) -> Option<Self> {
         match value {
-            1 => ClipboardType::Normal,
-            2 => ClipboardType::Markdown,
-            _ => panic!("Unknown value: {}", value),
+            1 => Some(ClipboardType::Normal),
+            2 => Some(ClipboardType::Markdown),
+            _ => None,
         }
     }
 }
@@ -57,7 +57,7 @@ pub struct Clipboard {
 }
 
 impl models::ClipboardModel for models::ModelHandler {
-    fn new(opt: models::ModelHandlerOptions) -> models::ModelHandler {
+    fn new(opt: models::ModelHandlerOptions) -> Self {
         use openssl::hash::{hash, MessageDigest};
 
         models::ModelHandler {
@@ -70,7 +70,7 @@ impl models::ClipboardModel for models::ModelHandler {
     }
 
     fn create_clipboard(&self, mut c: CreateClipboard) -> Result<String, Box<dyn Error>> {
-        let cid = nanoid::custom(12, &ID_ALPHABETS);
+        let cid = nanoid::custom(5, &ID_ALPHABETS);
         let iv: String;
         let clip_content_encrypted: Vec<u8>;
         if c.is_lock {
@@ -171,7 +171,8 @@ impl models::ClipboardModel for models::ModelHandler {
                             item.get_str("password")
                                 .unwrap_or_else(|_| Default::default()),
                         ),
-                        clip_type: ClipboardType::from_u8(item.get_i32("clip_type").unwrap() as u8),
+                        clip_type: ClipboardType::from_u8(item.get_i32("clip_type").unwrap() as u8)
+                            .unwrap(),
                         clip_content: match item.get_binary_generic("clip_content") {
                             Ok(val) => {
                                 let iv = item.get_str("iv");
