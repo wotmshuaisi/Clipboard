@@ -3,18 +3,22 @@ use mongodb::{bson, doc, Bson, ThreadedClient};
 use std::error::Error;
 use std::time::{SystemTime, UNIX_EPOCH};
 
+use serde_derive::Serialize;
+
 extern crate bcrypt;
 
 use crate::models;
 use crate::utils;
 
+/* Constants */
+
 const CLIPBOARD_COLLECTION_NAME: &str = "clipboard";
-const ID_ALPHABETS: [char; 62] = [
+const ID_ALPHABETS: [char; 36] = [
     '1', '2', '3', '4', '5', '6', '7', '8', '9', '0', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i',
-    'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', 'A', 'B',
-    'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U',
-    'V', 'W', 'X', 'Y', 'Z',
+    'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z',
 ];
+
+/* Structure/Enums & methods */
 
 #[derive(Debug)]
 pub enum ClipboardType {
@@ -44,17 +48,41 @@ pub struct CreateClipboard {
     // pub syntx_lang: Option<String>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize)]
 pub struct Clipboard {
     pub id: String,
-    pub clip_type: ClipboardType,
+    pub clip_type: u8,
     pub clip_content: String,
     pub clip_onetime: bool,
-    pub is_lock: bool,
-    pub password: String,
     pub expire_date: i64,
     pub date_time: i64,
+    #[serde(skip_serializing)]
+    pub is_lock: bool,
+    #[serde(skip_serializing)]
+    pub password: String,
 }
+
+impl Clipboard {
+    pub fn is_expired(&self) -> bool {
+        if self.expire_date
+            <= SystemTime::now()
+                .duration_since(SystemTime::UNIX_EPOCH)
+                .unwrap()
+                .as_secs() as i64
+        {
+            return true;
+        }
+        false
+    }
+    pub fn password_valid(&self, password: &str) -> bool {
+        match bcrypt::verify(&self.password, password) {
+            Ok(val) => val,
+            Err(_) => false,
+        }
+    }
+}
+
+/* Models trait implement */
 
 impl models::ClipboardModel for models::ModelHandler {
     fn new(opt: models::ModelHandlerOptions) -> Self {
@@ -100,6 +128,7 @@ impl models::ClipboardModel for models::ModelHandler {
                 "clip_content": Bson::Binary(bson::spec::BinarySubtype::Generic, clip_content_encrypted),
                 "clip_onetime": c.clip_onetime,
                 "is_lock": c.is_lock,
+                "expire_date": c.expire_date,
                 "password": match c.password{
                     Some(val) => val,
                     None=> Default::default()
@@ -152,6 +181,7 @@ impl models::ClipboardModel for models::ModelHandler {
             Ok(val) => {
                 if let Some(item) = val {
                     Ok(Some(Clipboard {
+                        clip_type: item.get_i32("clip_type").unwrap() as u8,
                         id: String::from(String::from(
                             item.get_str("id").unwrap_or_else(|_| Default::default()),
                         )),
@@ -171,8 +201,6 @@ impl models::ClipboardModel for models::ModelHandler {
                             item.get_str("password")
                                 .unwrap_or_else(|_| Default::default()),
                         ),
-                        clip_type: ClipboardType::from_u8(item.get_i32("clip_type").unwrap() as u8)
-                            .unwrap(),
                         clip_content: match item.get_binary_generic("clip_content") {
                             Ok(val) => {
                                 let iv = item.get_str("iv");
@@ -206,6 +234,8 @@ impl models::ClipboardModel for models::ModelHandler {
         }
     }
 }
+
+/* Test functions */
 
 #[test]
 fn clipboard_test() {

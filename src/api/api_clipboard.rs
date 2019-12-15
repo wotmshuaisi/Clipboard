@@ -1,6 +1,6 @@
 use actix_web::{error, web, HttpResponse};
 use serde_derive::Deserialize;
-use std::collections::HashMap;
+use serde_json::json;
 use std::time::SystemTime;
 
 use crate::api;
@@ -19,6 +19,13 @@ pub struct SetClipboardReq {
     #[serde(default = "default_expire_date")]
     pub expire_date: u64,
 }
+
+#[derive(Default, Debug, Deserialize)]
+pub struct RetrieveReq {
+    pub password: String,
+}
+
+/* Handlers */
 
 pub async fn set_clipboard(
     h: web::Data<api::HandlerState>,
@@ -59,11 +66,48 @@ pub async fn set_clipboard(
         },
         expire_date: item.expire_date as i64,
     }) {
-        Ok(id) => {
-            let mut map = HashMap::new();
-            map.insert("id", id);
-            Ok(HttpResponse::Ok().json(map))
-        }
+        Ok(id) => Ok(HttpResponse::Ok().json(json!({ "id": id }))),
+        Err(_) => Err(error::ErrorInternalServerError("")),
+    }
+}
+
+pub async fn retrieve_clipboard(
+    h: web::Data<api::HandlerState>,
+    path: web::Path<(String,)>,
+    query: web::Query<RetrieveReq>,
+) -> Result<HttpResponse, error::Error> {
+    match h.model.retrieve_clipboard(&path.0.to_lowercase()) {
+        Ok(val) => match val {
+            Some(c) => {
+                // expiration check
+                if c.is_expired() {
+                    h.model.destroy_clipboard(&c.id).unwrap();
+                    return Err(error::ErrorNotFound("no resource has been found."));
+                }
+                // password
+                match c.is_lock {
+                    true => {
+                        // empty password
+                        if query.password.is_empty() {
+                            return Err(error::ErrorBadRequest(
+                                "password is required for this clipboard.",
+                            ));
+                        }
+                        // password validator
+                        if !c.password_valid(&query.password) {
+                            return Err(error::ErrorBadRequest("wrong password."));
+                        }
+                    }
+                    _ => {}
+                }
+                // remove item if it's one-time clipboard
+                if c.clip_onetime {
+                    h.model.destroy_clipboard(&c.id).unwrap();
+                }
+                Ok(HttpResponse::Ok().json(c))
+            }
+            None => Err(error::ErrorNotFound("no resource has been found.")),
+        },
         Err(_) => Err(error::ErrorInternalServerError("")),
     }
 }
