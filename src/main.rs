@@ -37,10 +37,11 @@ async fn main() -> std::io::Result<()> {
     /* Initialization */
     let (_guard, logger) = initial_logger(&env_mode, &env_log_path);
     let mongo_client = initial_mongo(&env_mongo_addr);
-    let _models: models::ModelHandler = models::ClipboardModel::new(models::ModelHandlerOptions {
-        conn: mongo_client.clone(),
-        key: env_app_salt,
-    });
+    let model_handler: models::ModelHandler =
+        models::ClipboardModel::new(models::ModelHandlerOptions {
+            conn: mongo_client.clone(),
+            key: env_app_salt,
+        });
     /* Operations */
     info!(
         slog_scope::logger(),
@@ -49,6 +50,9 @@ async fn main() -> std::io::Result<()> {
     HttpServer::new(move || {
         App::new()
             .wrap(logging::Logging::new(logger.clone()))
+            .data(api::HandlerState {
+                model: model_handler.clone(),
+            })
             .configure(api::set_api_router)
     })
     .bind(env_listen_addr)?

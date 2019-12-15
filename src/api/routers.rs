@@ -1,20 +1,26 @@
 use actix_web::web;
 
 use crate::api;
+use crate::models;
 
 /*
 
 Todo List:
 
     1. use async on function level [done]
-    2. get parameters from json
-    3. error handling in api level
-    4. finished clipboard creating interface
+    2. get parameters from json [done]
+    3. error handling in api level [done]
+    4. finished clipboard creating interface [done]
     5. finished clipboard retrieving interface
         1. password validation
         2. destory one-time or expired clipboards
 
 */
+
+#[derive(Debug)]
+pub struct HandlerState {
+    pub model: models::ModelHandler,
+}
 
 pub fn set_api_router(cfg: &mut web::ServiceConfig) {
     cfg.service(
