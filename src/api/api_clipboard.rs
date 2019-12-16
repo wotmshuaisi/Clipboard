@@ -20,9 +20,9 @@ pub struct SetClipboardReq {
     pub expire_date: u64,
 }
 
-#[derive(Default, Debug, Deserialize)]
+#[derive(Default, Clone, Debug, Deserialize)]
 pub struct RetrieveReq {
-    pub password: String,
+    pub password: Option<String>,
 }
 
 /* Handlers */
@@ -85,20 +85,21 @@ pub async fn retrieve_clipboard(
                     return Err(error::ErrorNotFound("no resource has been found."));
                 }
                 // password
-                match c.is_lock {
-                    true => {
-                        // empty password
-                        if query.password.is_empty() {
+                if c.is_lock {
+                    // empty password
+                    match &query.password {
+                        Some(val) => {
+                            // password validator
+                            if !c.password_valid(&val) {
+                                return Err(error::ErrorBadRequest("wrong password."));
+                            }
+                        }
+                        _ => {
                             return Err(error::ErrorBadRequest(
                                 "password is required for this clipboard.",
                             ));
                         }
-                        // password validator
-                        if !c.password_valid(&query.password) {
-                            return Err(error::ErrorBadRequest("wrong password."));
-                        }
                     }
-                    _ => {}
                 }
                 // remove item if it's one-time clipboard
                 if c.clip_onetime {
@@ -108,6 +109,26 @@ pub async fn retrieve_clipboard(
             }
             None => Err(error::ErrorNotFound("no resource has been found.")),
         },
+        Err(_) => Err(error::ErrorInternalServerError("")),
+    }
+}
+
+pub async fn islock_clipboard(
+    h: web::Data<api::HandlerState>,
+    path: web::Path<(String,)>,
+) -> Result<HttpResponse, error::Error> {
+    match h.model.retrieve_clipboard(&path.0.to_lowercase()) {
+        Ok(val) => {
+            let is_none = val.is_none();
+            if !is_none {
+                let v = val.unwrap();
+                if !v.is_expired() {
+                    return Ok(HttpResponse::Ok().json(json!({"is_lock": v.is_lock})));
+                }
+                h.model.destroy_clipboard(&v.id).unwrap();
+            }
+            Err(error::ErrorNotFound("no resource has been found."))
+        }
         Err(_) => Err(error::ErrorInternalServerError("")),
     }
 }

@@ -48,7 +48,7 @@ pub struct CreateClipboard {
     // pub syntx_lang: Option<String>,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Clone, Serialize)]
 pub struct Clipboard {
     pub id: String,
     pub clip_type: u8,
