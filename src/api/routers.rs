@@ -28,12 +28,13 @@ pub fn set_api_router(cfg: &mut web::ServiceConfig) {
         web::scope("/api").service(
             web::scope("/clipboard")
                 .route("", web::get().to(|| web::HttpResponse::NoContent()))
-                .route("", web::post().to(api::set_clipboard))
                 .service(
                     web::scope("/{id}")
                         .route("", web::get().to(api::retrieve_clipboard))
                         .route("/is_lock", web::get().to(api::islock_clipboard)),
-                ),
+                )
+                .data(web::JsonConfig::default().limit(6000000)) // maximum body size is 6mb
+                .route("", web::post().to(api::set_clipboard)),
         ),
     );
 }

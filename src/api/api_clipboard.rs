@@ -6,6 +6,8 @@ use std::time::SystemTime;
 use crate::api;
 use crate::models::{ClipboardModel, ClipboardType, CreateClipboard};
 
+pub const MB: usize = 1000000;
+
 /* Structures */
 
 #[derive(Debug, Default, Deserialize)]
@@ -33,6 +35,11 @@ pub async fn set_clipboard(
 ) -> Result<HttpResponse, error::Error> {
     if item.content.is_empty() {
         return Err(error::ErrorBadRequest("content can not be empty"));
+    }
+    if item.content.len() > (MB as f64 * 4.9) as usize {
+        return Err(error::ErrorBadRequest(
+            "maximum content size is 4900000 bytes",
+        ));
     }
     if SystemTime::now()
         .duration_since(SystemTime::UNIX_EPOCH)
