@@ -1,4 +1,3 @@
-use crate::utils;
 use actix_multipart::Multipart;
 use actix_web::web;
 use futures::StreamExt;
@@ -6,7 +5,7 @@ use std::collections::HashMap;
 use std::io::Write;
 
 pub async fn multipart_processor(
-    mut tmp_path: String,
+    tmp_path: String,
     file_field: &str,
     mut payload: Multipart,
 ) -> Result<HashMap<String, String>, actix_multipart::MultipartError> {
