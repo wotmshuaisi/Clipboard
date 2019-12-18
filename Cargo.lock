@@ -84,6 +84,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "actix-multipart"
+version = "0.2.0-alpha.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+dependencies = [
+ "actix-service 1.0.0-alpha.4 (registry+https://github.com/rust-lang/crates.io-index)",
+ "actix-utils 1.0.0-alpha.3 (registry+https://github.com/rust-lang/crates.io-index)",
+ "actix-web 2.0.0-alpha.4 (registry+https://github.com/rust-lang/crates.io-index)",
+ "bytes 0.5.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "derive_more 0.99.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "futures 0.3.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "httparse 1.3.4 (registry+https://github.com/rust-lang/crates.io-index)",
+ "log 0.4.8 (registry+https://github.com/rust-lang/crates.io-index)",
+ "mime 0.3.14 (registry+https://github.com/rust-lang/crates.io-index)",
+ "time 0.1.42 (registry+https://github.com/rust-lang/crates.io-index)",
+ "twoway 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
 name = "actix-router"
 version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -526,6 +544,7 @@ dependencies = [
 name = "clipboard"
 version = "0.1.0"
 dependencies = [
+ "actix-multipart 0.2.0-alpha.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "actix-rt 1.0.0-alpha.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "actix-service 1.0.0-alpha.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "actix-web 2.0.0-alpha.4 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1973,6 +1992,15 @@ version = "0.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
+name = "twoway"
+version = "0.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+dependencies = [
+ "memchr 2.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "unchecked-index 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
 name = "typenum"
 version = "1.11.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1980,6 +2008,11 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 [[package]]
 name = "ucd-util"
 version = "0.1.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+
+[[package]]
+name = "unchecked-index"
+version = "0.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
@@ -2097,6 +2130,7 @@ dependencies = [
 "checksum actix-connect 1.0.0-alpha.3 (registry+https://github.com/rust-lang/crates.io-index)" = "d790ac9818a45c45ed07cbf23d4623d6291c3c02e4c093f9f33b113c8f160273"
 "checksum actix-http 1.0.0-alpha.4 (registry+https://github.com/rust-lang/crates.io-index)" = "30eb643b96843abb75bb0fcb3682b54afd8a25895def0cbecc1cc841301ca085"
 "checksum actix-macros 0.1.0-alpha.1 (registry+https://github.com/rust-lang/crates.io-index)" = "175eb9aa765be94e1ea15687ed594885dfaad6a490827b50c983198655da166d"
+"checksum actix-multipart 0.2.0-alpha.3 (registry+https://github.com/rust-lang/crates.io-index)" = "ecc52d3eee55381837f33f9cf2017a382f3a39dc39f235d72e6bca99301a35ea"
 "checksum actix-router 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)" = "d814d73bdc83834922d96b7f1215a17186c82703df804a0f1ec9e8dc206ca7c1"
 "checksum actix-rt 1.0.0-alpha.3 (registry+https://github.com/rust-lang/crates.io-index)" = "3b7b48ff85f7bb8d9cbb87ff7f33cbfd29f6dad7da01702063fd7d8c27d24869"
 "checksum actix-server 1.0.0-alpha.4 (registry+https://github.com/rust-lang/crates.io-index)" = "ac55c67623e075bbd0766aeee58a0491491b9954f1c2bad76175460b7b57d1cf"
@@ -2306,8 +2340,10 @@ dependencies = [
 "checksum trust-dns-proto 0.18.0-alpha.2 (registry+https://github.com/rust-lang/crates.io-index)" = "2a7f3a2ab8a919f5eca52a468866a67ed7d3efa265d48a652a9a3452272b413f"
 "checksum trust-dns-resolver 0.18.0-alpha.2 (registry+https://github.com/rust-lang/crates.io-index)" = "6f90b1502b226f8b2514c6d5b37bafa8c200d7ca4102d57dc36ee0f3b7a04a2f"
 "checksum try_from 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)" = "923a7ee3e97dbfe8685261beb4511cc9620a1252405d02693d43169729570111"
+"checksum twoway 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)" = "6b40075910de3a912adbd80b5d8bad6ad10a23eeb1f5bf9d4006839e899ba5bc"
 "checksum typenum 1.11.2 (registry+https://github.com/rust-lang/crates.io-index)" = "6d2783fe2d6b8c1101136184eb41be8b1ad379e4657050b8aaff0c79ee7575f9"
 "checksum ucd-util 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)" = "fa9b3b49edd3468c0e6565d85783f51af95212b6fa3986a5500954f00b460874"
+"checksum unchecked-index 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)" = "eeba86d422ce181a719445e51872fa30f1f7413b62becb52e95ec91aa262d85c"
 "checksum unicode-bidi 0.3.4 (registry+https://github.com/rust-lang/crates.io-index)" = "49f2bd0c6468a8230e1db229cff8029217cf623c767ea5d60bfbd42729ea54d5"
 "checksum unicode-normalization 0.1.11 (registry+https://github.com/rust-lang/crates.io-index)" = "b561e267b2326bb4cebfc0ef9e68355c7abe6c6f522aeac2f5bf95d56c59bdcf"
 "checksum unicode-segmentation 1.6.0 (registry+https://github.com/rust-lang/crates.io-index)" = "e83e153d1053cbb5a118eeff7fd5be06ed99153f00dbcd8ae310c5fb2b22edc0"

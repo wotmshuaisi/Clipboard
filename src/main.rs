@@ -20,6 +20,7 @@ const RELEASE_MODE: &str = "RELEASE";
 const MONGO_ADDR: &str = "mongodb://127.0.0.1:27017/admin";
 const APP_SALT: &str = "saltforbcrypt";
 const LISTEN_ADDR: &str = "0.0.0.0:8000";
+const TEMP_PATH: &str = "tmp/";
 
 #[actix_rt::main]
 async fn main() -> std::io::Result<()> {
@@ -28,6 +29,7 @@ async fn main() -> std::io::Result<()> {
     let env_mongo_addr = utils::get_env("MONGO_ADDR", MONGO_ADDR);
     let env_app_salt = utils::get_env("APP_SALT", APP_SALT);
     let env_listen_addr = utils::get_env("LISTEN_ADDR", LISTEN_ADDR);
+    let env_temp_path = utils::get_env("TEMP_PATH", TEMP_PATH);
     let env_mode = |x: String| -> String {
         if &x == RELEASE_MODE {
             return x;
@@ -52,6 +54,7 @@ async fn main() -> std::io::Result<()> {
             .wrap(logging::Logging::new(logger.clone()))
             .data(api::HandlerState {
                 model: model_handler.clone(),
+                temp_path: env_temp_path.clone(),
             })
             .configure(api::set_api_router)
     })
