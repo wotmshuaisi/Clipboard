@@ -10,6 +10,8 @@ extern crate bcrypt;
 use crate::models;
 use crate::utils;
 
+use models::StorageModel;
+
 /* Constants */
 
 const CLIPBOARD_COLLECTION_NAME: &str = "clipboard";
@@ -181,6 +183,7 @@ impl models::ClipboardModel for models::ModelHandler {
                 if val.deleted_count == 0 {
                     self.warn_log("ClipboardModel destroy_clipboard", 0);
                 }
+                self.remove_minio_folder(&(String::from("clipboard/") + id))?;
                 Ok(())
             }
             Err(err) => Err(Box::new(err)),

@@ -49,7 +49,7 @@ pub fn set_api_router(cfg: &mut web::ServiceConfig) {
                             //     "/{taskid}/{filename}",
                             //     web::get().to(api::get_clipboard_file),
                             // )
-                            .route("/", web::post().to(api::upload_clipboard_files)),
+                            .route("", web::post().to(api::upload_clipboard_files)),
                     ),
             ),
     );

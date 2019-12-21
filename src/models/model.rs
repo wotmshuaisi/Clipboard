@@ -23,6 +23,7 @@ pub trait StorageModel {
         folder: &str,
         file_name: &str,
     ) -> Result<String, Box<dyn Error>>;
+    fn remove_minio_folder(&self, path: &str) -> Result<(), Box<dyn Error>>;
 }
 
 #[derive(Clone, Debug)]

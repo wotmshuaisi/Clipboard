@@ -59,10 +59,11 @@ pub async fn upload_clipboard_files(
         if file_name_path.len() != 2 {
             continue;
         }
-        match h
-            .model
-            .save_to_minio(file_name_path[1], task_id, file_name_path[0])
-        {
+        match h.model.save_to_minio(
+            file_name_path[1],
+            &(String::from("clipboard/") + task_id),
+            file_name_path[0],
+        ) {
             Ok(link) => links.insert(0, (String::from(file_name_path[0]), link)),
             Err(_) => {
                 return Err(error::ErrorInternalServerError(""));
