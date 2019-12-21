@@ -42,7 +42,15 @@ pub fn set_api_router(cfg: &mut web::ServiceConfig) {
             .service(
                 web::scope("/storage")
                     .route("", web::get().to(|| web::HttpResponse::MethodNotAllowed()))
-                    .route("/clipboard", web::post().to(api::upload_clipboard_files)),
+                    .service(
+                        web::scope("/clipboard")
+                            .route("", web::get().to(|| web::HttpResponse::MethodNotAllowed()))
+                            // .route(
+                            //     "/{taskid}/{filename}",
+                            //     web::get().to(api::get_clipboard_file),
+                            // )
+                            .route("/", web::post().to(api::upload_clipboard_files)),
+                    ),
             ),
     );
 }

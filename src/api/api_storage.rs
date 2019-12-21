@@ -72,3 +72,9 @@ pub async fn upload_clipboard_files(
 
     Ok(HttpResponse::Created().json(json!({ "links": links })))
 }
+
+// pub async fn get_clipboard_file(
+//     h: web::Data<api::HandlerState>,
+//     path: web::Path<(String, String)>,
+// ) -> Result<HttpResponse, error::Error> {
+// }
