@@ -1,3 +1,4 @@
+use mongodb::ThreadedClient;
 use std::clone::Clone;
 use std::error::Error;
 
@@ -6,7 +7,6 @@ use crate::models;
 /* Interface & Structures */
 
 pub trait ClipboardModel {
-    fn new(opt: models::ModelHandlerOptions) -> Self;
     fn create_clipboard(&self) -> Result<String, Box<dyn Error>>;
     fn set_clipboard(&self, c: models::SetClipboard) -> Result<(), Box<dyn Error>>;
     fn destroy_clipboard(&self, id: &str) -> Result<(), Box<dyn Error>>;
@@ -16,19 +16,47 @@ pub trait ClipboardModel {
     ) -> Result<Option<models::Clipboard>, Box<dyn Error>>;
 }
 
+pub trait StorageModel {
+    fn save_to_minio(
+        &self,
+        source: &str,
+        folder: &str,
+        file_name: &str,
+    ) -> Result<String, Box<dyn Error>>;
+}
+
 #[derive(Clone, Debug)]
 pub struct ModelHandler {
     pub db: mongodb::db::Database,
     pub logger: slog::Logger,
     pub key: Vec<u8>,
+    pub minio_public_path: String,
+    pub minio_cdn_prefix: String,
 }
 
 pub struct ModelHandlerOptions {
     pub conn: mongodb::Client,
     pub key: String,
+    pub minio_public_path: String,
+    pub minio_cdn_prefix: String,
 }
 
 /* Implement */
+
+impl ModelHandler {
+    pub fn new(opt: ModelHandlerOptions) -> ModelHandler {
+        use openssl::hash::{hash, MessageDigest};
+        ModelHandler {
+            db: opt.conn.db("clipboard"),
+            logger: slog_scope::logger(),
+            key: hash(MessageDigest::sha3_256(), opt.key.as_bytes())
+                .unwrap()
+                .to_vec(),
+            minio_public_path: opt.minio_public_path,
+            minio_cdn_prefix: opt.minio_cdn_prefix,
+        }
+    }
+}
 
 impl ModelHandler {
     pub fn err_log(&self, model_func_name: &str, index: i8, err: &str) {
@@ -48,16 +76,16 @@ impl ModelHandler {
 #[allow(dead_code)]
 pub fn initial_test_handler() -> ModelHandler {
     use crate::utils;
-    use mongodb::ThreadedClient;
-
     let _guard = slog_scope::set_global_logger(utils::new_logger(
         String::from("./log/") + "test.log",
         "test",
         false,
     ));
     let client = mongodb::Client::with_uri("mongodb://127.0.0.1:27017/").unwrap();
-    models::ClipboardModel::new(models::ModelHandlerOptions {
+    models::ModelHandler::new(models::ModelHandlerOptions {
         conn: client,
         key: String::from("test_salt"),
+        minio_public_path: String::from(""),
+        minio_cdn_prefix: String::from(""),
     })
 }

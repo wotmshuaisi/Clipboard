@@ -1,5 +1,5 @@
 use mongodb::db::ThreadedDatabase;
-use mongodb::{bson, doc, Bson, ThreadedClient};
+use mongodb::{bson, doc, Bson};
 use std::error::Error;
 use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -94,18 +94,6 @@ impl Clipboard {
 /* Models trait implement */
 
 impl models::ClipboardModel for models::ModelHandler {
-    fn new(opt: models::ModelHandlerOptions) -> Self {
-        use openssl::hash::{hash, MessageDigest};
-
-        models::ModelHandler {
-            db: opt.conn.db("clipboard"),
-            logger: slog_scope::logger(),
-            key: hash(MessageDigest::sha3_256(), opt.key.as_bytes())
-                .unwrap()
-                .to_vec(),
-        }
-    }
-
     fn create_clipboard(&self) -> Result<String, Box<dyn Error>> {
         let cid = nanoid::custom(5, &ID_ALPHABETS);
         match self.db.collection(CLIPBOARD_COLLECTION_NAME).insert_one(
