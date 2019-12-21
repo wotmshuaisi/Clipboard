@@ -18,9 +18,9 @@ use crate::utils;
 
     Todo:
         - util function
-            - hashmap
-                save fieldname - "value"
-                save fieldname - "filename|temparory path"
+            - hashmap [done]
+                save fieldname - "value" [done]
+                save fieldname - "filename|temparory path" [done]
         - save to minio by taskid
 */
 
