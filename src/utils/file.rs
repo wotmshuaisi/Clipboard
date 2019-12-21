@@ -30,7 +30,10 @@ pub async fn multipart_processor(
             }
             continue;
         }
-        let file_name = content_disposition.get_filename().unwrap();
+        let file_name = match content_disposition.get_filename() {
+            Some(val) => val,
+            None => continue,
+        };
         let path = tmp_path.clone() + &nanoid::simple();
         files = files + file_name + "|" + &path + "||";
 
