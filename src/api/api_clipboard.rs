@@ -70,6 +70,7 @@ pub async fn set_clipboard(
     match h.model.retrieve_clipboard(GetClipboard {
         id: String::from(&item.id),
         expire_check: false,
+        is_set: false,
     }) {
         Ok(c) => {
             if c.is_none() {
@@ -114,6 +115,7 @@ pub async fn retrieve_clipboard(
     match h.model.retrieve_clipboard(GetClipboard {
         id: path.0.to_lowercase(),
         expire_check: true,
+        is_set: true,
     }) {
         Ok(val) => match val {
             Some(c) => {
@@ -153,6 +155,7 @@ pub async fn islock_clipboard(
     match h.model.retrieve_clipboard(GetClipboard {
         id: path.0.to_lowercase(),
         expire_check: true,
+        is_set: true,
     }) {
         Ok(val) => match val {
             Some(c) => Ok(HttpResponse::Ok().json(json!({"is_lock": c.is_lock}))),

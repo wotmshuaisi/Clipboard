@@ -52,6 +52,7 @@ pub struct SetClipboard {
 pub struct GetClipboard {
     pub id: String,
     pub expire_check: bool,
+    pub is_set: bool,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -202,19 +203,19 @@ impl models::ClipboardModel for models::ModelHandler {
         match self.db.collection(CLIPBOARD_COLLECTION_NAME).find_one(
             Some(doc! {
                 "id": opt.id,
+                "is_set": opt.is_set,
             }),
             None,
         ) {
             Ok(val) => {
                 if let Some(item) = val {
                     let c = Clipboard {
-                        clip_type: item.get_i32("clip_type").unwrap() as u8,
-                        id: String::from(String::from(
-                            item.get_str("id").unwrap_or_else(|_| Default::default()),
-                        )),
-                        is_set: item
-                            .get_bool("is_set")
-                            .unwrap_or_else(|_| Default::default()),
+                        id: String::from(String::from(item.get_str("id").unwrap())),
+                        is_set: item.get_bool("is_set").unwrap(),
+                        clip_type: item
+                            .get_i32("clip_type")
+                            .unwrap_or_else(|_| Default::default())
+                            as u8,
                         is_lock: item
                             .get_bool("is_lock")
                             .unwrap_or_else(|_| Default::default()),
@@ -253,7 +254,7 @@ impl models::ClipboardModel for models::ModelHandler {
                             Err(_) => String::from(""),
                         },
                     };
-                    if !opt.expire_check && c.is_expired() {
+                    if opt.expire_check && c.is_expired() {
                         self.destroy_clipboard(&c.id)?;
                         return Ok(None);
                     }
@@ -315,6 +316,7 @@ fn clipboard_test() {
         .retrieve_clipboard(GetClipboard {
             id: String::from(&taskid),
             expire_check: false,
+            is_set: false,
         })
         .unwrap();
     if let Some(doc) = doc {
