@@ -42,7 +42,7 @@ pub fn set_api_router(cfg: &mut web::ServiceConfig) {
             .service(
                 web::scope("/storage")
                     .route("", web::get().to(|| web::HttpResponse::MethodNotAllowed()))
-                    .route("", web::post().to(api::upload_to_storage)),
+                    .route("/clipboard", web::post().to(api::upload_clipboard_files)),
             ),
     );
 }

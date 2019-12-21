@@ -10,17 +10,7 @@ use crate::utils;
 
 /* Handlers */
 
-/*
-
-    Todo:
-        - util function
-            - hashmap [done]
-                save fieldname - "value" [done]
-                save fieldname - "filename|temparory path" [done]
-        - save to minio by taskid [done]
-*/
-
-pub async fn upload_to_storage(
+pub async fn upload_clipboard_files(
     h: web::Data<api::HandlerState>,
     payload: Multipart,
 ) -> Result<HttpResponse, error::Error> {
