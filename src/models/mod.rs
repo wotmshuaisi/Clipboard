@@ -10,4 +10,5 @@ pub use self::model::ModelHandlerOptions;
 
 pub use self::mongo_clipboard::Clipboard;
 pub use self::mongo_clipboard::ClipboardType;
-pub use self::mongo_clipboard::CreateClipboard;
+pub use self::mongo_clipboard::GetClipboard;
+pub use self::mongo_clipboard::SetClipboard;

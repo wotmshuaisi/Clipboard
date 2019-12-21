@@ -37,7 +37,8 @@ impl ClipboardType {
     }
 }
 
-pub struct CreateClipboard {
+pub struct SetClipboard {
+    pub id: String,
     pub clip_content: String,
     pub clip_type: ClipboardType,
     pub clip_onetime: bool,
@@ -46,6 +47,11 @@ pub struct CreateClipboard {
     pub expire_date: i64,
     // pub uid: Option<String>,
     // pub syntx_lang: Option<String>,
+}
+
+pub struct GetClipboard {
+    pub id: String,
+    pub expire_check: bool,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -60,6 +66,8 @@ pub struct Clipboard {
     pub is_lock: bool,
     #[serde(skip_serializing)]
     pub password: String,
+    #[serde(skip_serializing)]
+    pub is_set: bool,
 }
 
 impl Clipboard {
@@ -97,8 +105,24 @@ impl models::ClipboardModel for models::ModelHandler {
         }
     }
 
-    fn create_clipboard(&self, mut c: CreateClipboard) -> Result<String, Box<dyn Error>> {
+    fn create_clipboard(&self) -> Result<String, Box<dyn Error>> {
         let cid = nanoid::custom(5, &ID_ALPHABETS);
+        match self.db.collection(CLIPBOARD_COLLECTION_NAME).insert_one(
+            doc! {
+                "id": &cid,
+                "is_set": false,
+            },
+            None,
+        ) {
+            Ok(_) => Ok(cid),
+            Err(err) => {
+                self.err_log("ClipboardModel create_clipboard", -1, &err.to_string());
+                Err(Box::new(err))
+            }
+        }
+    }
+
+    fn set_clipboard(&self, mut c: SetClipboard) -> Result<(), Box<dyn Error>> {
         let iv: String;
         let clip_content_encrypted: Vec<u8>;
         if c.is_lock {
@@ -121,31 +145,34 @@ impl models::ClipboardModel for models::ModelHandler {
             }
         };
 
-        match self.db.collection(CLIPBOARD_COLLECTION_NAME).insert_one(
+        match self.db.collection(CLIPBOARD_COLLECTION_NAME).update_one(
             doc! {
-                "id": String::from(cid.as_str()),
-                "iv": iv,
-                "clip_content": Bson::Binary(bson::spec::BinarySubtype::Generic, clip_content_encrypted),
-                "clip_onetime": c.clip_onetime,
-                "is_lock": c.is_lock,
-                "expire_date": c.expire_date,
-                "password": match c.password{
-                    Some(val) => val,
-                    None=> Default::default()
+                "id": c.id,
+                "is_set": false,
+            },
+            doc! {
+                "$set": doc! {
+                    "iv": iv,
+                    "clip_content": Bson::Binary(bson::spec::BinarySubtype::Generic, clip_content_encrypted),
+                    "clip_onetime": c.clip_onetime,
+                    "is_lock": c.is_lock,
+                    "expire_date": c.expire_date,
+                    "password": match c.password{
+                        Some(val) => val,
+                        None=> Default::default()
+                    },
+                    "date_time": SystemTime::now()
+                    .duration_since( UNIX_EPOCH)
+                    .unwrap()
+                    .as_secs() as i64,
+                    "clip_type": c.clip_type as i32,
+                    "is_set": true,
                 },
-                "date_time": SystemTime::now()
-                .duration_since( UNIX_EPOCH)
-                .unwrap()
-                .as_secs() as i64,
-                "clip_type": c.clip_type as i32,
             },
             None,
         ) {
-            Ok(val) => {
-                if !val.inserted_id.is_some() {
-                    self.warn_log("ClipboardModel create_clipboard", 1);
-                }
-                Ok(cid)
+            Ok(_) => {
+                Ok(())
             }
             Err(err) => {
                 self.err_log("ClipboardModel create_clipboard", 1, &err.to_string());
@@ -171,20 +198,23 @@ impl models::ClipboardModel for models::ModelHandler {
         }
     }
 
-    fn retrieve_clipboard(&self, id: &str) -> Result<Option<Clipboard>, Box<dyn Error>> {
+    fn retrieve_clipboard(&self, opt: GetClipboard) -> Result<Option<Clipboard>, Box<dyn Error>> {
         match self.db.collection(CLIPBOARD_COLLECTION_NAME).find_one(
             Some(doc! {
-                "id": id,
+                "id": opt.id,
             }),
             None,
         ) {
             Ok(val) => {
                 if let Some(item) = val {
-                    Ok(Some(Clipboard {
+                    let c = Clipboard {
                         clip_type: item.get_i32("clip_type").unwrap() as u8,
                         id: String::from(String::from(
                             item.get_str("id").unwrap_or_else(|_| Default::default()),
                         )),
+                        is_set: item
+                            .get_bool("is_set")
+                            .unwrap_or_else(|_| Default::default()),
                         is_lock: item
                             .get_bool("is_lock")
                             .unwrap_or_else(|_| Default::default()),
@@ -222,7 +252,12 @@ impl models::ClipboardModel for models::ModelHandler {
                             }
                             Err(_) => String::from(""),
                         },
-                    }))
+                    };
+                    if !opt.expire_check && c.is_expired() {
+                        self.destroy_clipboard(&c.id)?;
+                        return Ok(None);
+                    }
+                    Ok(Some(c))
                 } else {
                     Ok(None)
                 }
@@ -239,7 +274,7 @@ impl models::ClipboardModel for models::ModelHandler {
 
 #[test]
 fn clipboard_test() {
-    use crate::models::{ClipboardModel, CreateClipboard};
+    use crate::models::{ClipboardModel, GetClipboard, SetClipboard};
 
     let m = models::initial_test_handler();
     // let result = m
@@ -256,25 +291,32 @@ fn clipboard_test() {
 
     // // password content
     let pass = "password";
-    let result = m
-        .create_clipboard(CreateClipboard {
-            clip_content: String::from("test 1"),
-            clip_onetime: true,
-            clip_type: ClipboardType::Normal,
-            is_lock: true,
-            password: Some(String::from(pass)),
-            expire_date: SystemTime::now()
-                .duration_since(UNIX_EPOCH)
-                .unwrap()
-                .as_secs() as i64
-                + (5 * 24 * 3600) as i64,
-        })
-        .unwrap();
+    let taskid = m.create_clipboard().unwrap();
 
-    assert_ne!(result, "");
+    m.set_clipboard(SetClipboard {
+        id: String::from(&taskid),
+        clip_content: String::from("test 1"),
+        clip_onetime: true,
+        clip_type: ClipboardType::Normal,
+        is_lock: true,
+        password: Some(String::from(pass)),
+        expire_date: SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_secs() as i64
+            + (5 * 24 * 3600) as i64,
+    })
+    .unwrap();
+
+    assert_ne!(&taskid, "");
 
     // retrieve clipboard
-    let doc = m.retrieve_clipboard(&result).unwrap();
+    let doc = m
+        .retrieve_clipboard(GetClipboard {
+            id: String::from(&taskid),
+            expire_check: false,
+        })
+        .unwrap();
     if let Some(doc) = doc {
         assert_ne!("", &doc.id);
         assert_eq!("test 1", &doc.clip_content);
@@ -284,7 +326,7 @@ fn clipboard_test() {
     }
 
     // // delete clipboard
-    let result = m.destroy_clipboard(&result);
+    let result = m.destroy_clipboard(&taskid);
 
     assert_eq!(result.is_ok(), true);
 }

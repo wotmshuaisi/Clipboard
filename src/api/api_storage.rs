@@ -4,7 +4,6 @@ use actix_web::{error, web, HttpResponse};
 // use std::time::SystemTime;
 
 use actix_multipart::Multipart;
-// use std::collections::HashMap;
 
 use crate::api;
 use crate::utils;
@@ -29,7 +28,13 @@ pub async fn upload_to_storage(
     payload: Multipart,
 ) -> Result<HttpResponse, error::Error> {
     let map = utils::multipart_processor(h.temp_path.clone(), "[]file", payload).await?;
-    println!("{:#?}", map);
+    let task_id = match map.get("task_id") {
+        Some(val) => val,
+        None => {
+            return Err(error::ErrorBadRequest("[task_id] is required"));
+        }
+    };
 
+    println!("{:#?}", map);
     Ok(HttpResponse::Ok().body("ok"))
 }

@@ -4,12 +4,13 @@ use serde_json::json;
 use std::time::SystemTime;
 
 use crate::api;
-use crate::models::{ClipboardModel, ClipboardType, CreateClipboard};
+use crate::models::{ClipboardModel, ClipboardType, GetClipboard, SetClipboard};
 
 /* Structures */
 
 #[derive(Debug, Default, Deserialize)]
 pub struct SetClipboardReq {
+    pub id: String,
     pub content: String,
     pub password: Option<String>,
     #[serde(default)]
@@ -26,6 +27,15 @@ pub struct RetrieveReq {
 }
 
 /* Handlers */
+
+pub async fn create_clipboard(
+    h: web::Data<api::HandlerState>,
+) -> Result<HttpResponse, error::Error> {
+    match h.model.create_clipboard() {
+        Ok(id) => Ok(HttpResponse::Created().json(json!({ "id": id }))),
+        Err(_) => Err(error::ErrorInternalServerError("")),
+    }
+}
 
 pub async fn set_clipboard(
     h: web::Data<api::HandlerState>,
@@ -57,7 +67,27 @@ pub async fn set_clipboard(
         }
     };
 
-    match h.model.create_clipboard(CreateClipboard {
+    match h.model.retrieve_clipboard(GetClipboard {
+        id: String::from(&item.id),
+        expire_check: false,
+    }) {
+        Ok(c) => {
+            if c.is_none() {
+                return Err(error::ErrorNotFound("no resource has been found."));
+            }
+            if c.unwrap().is_set {
+                return Err(error::ErrorBadRequest(
+                    "this clipboard has already been setup.",
+                ));
+            }
+        }
+        Err(_) => {
+            return Err(error::ErrorInternalServerError(""));
+        }
+    };
+
+    match h.model.set_clipboard(SetClipboard {
+        id: String::from(&item.id),
         clip_content: String::from(&item.content),
         clip_type: clip_type,
         clip_onetime: item.onetime,
@@ -71,7 +101,7 @@ pub async fn set_clipboard(
         },
         expire_date: item.expire_date as i64,
     }) {
-        Ok(id) => Ok(HttpResponse::Ok().json(json!({ "id": id }))),
+        Ok(()) => Ok(HttpResponse::NoContent().finish()),
         Err(_) => Err(error::ErrorInternalServerError("")),
     }
 }
@@ -81,14 +111,12 @@ pub async fn retrieve_clipboard(
     path: web::Path<(String,)>,
     query: web::Query<RetrieveReq>,
 ) -> Result<HttpResponse, error::Error> {
-    match h.model.retrieve_clipboard(&path.0.to_lowercase()) {
+    match h.model.retrieve_clipboard(GetClipboard {
+        id: path.0.to_lowercase(),
+        expire_check: true,
+    }) {
         Ok(val) => match val {
             Some(c) => {
-                // expiration check
-                if c.is_expired() {
-                    h.model.destroy_clipboard(&c.id).unwrap();
-                    return Err(error::ErrorNotFound("no resource has been found."));
-                }
                 // password
                 if c.is_lock {
                     // empty password
@@ -122,18 +150,14 @@ pub async fn islock_clipboard(
     h: web::Data<api::HandlerState>,
     path: web::Path<(String,)>,
 ) -> Result<HttpResponse, error::Error> {
-    match h.model.retrieve_clipboard(&path.0.to_lowercase()) {
-        Ok(val) => {
-            let is_none = val.is_none();
-            if !is_none {
-                let v = val.unwrap();
-                if !v.is_expired() {
-                    return Ok(HttpResponse::Ok().json(json!({"is_lock": v.is_lock})));
-                }
-                h.model.destroy_clipboard(&v.id).unwrap();
-            }
-            Err(error::ErrorNotFound("no resource has been found."))
-        }
+    match h.model.retrieve_clipboard(GetClipboard {
+        id: path.0.to_lowercase(),
+        expire_check: true,
+    }) {
+        Ok(val) => match val {
+            Some(c) => Ok(HttpResponse::Ok().json(json!({"is_lock": c.is_lock}))),
+            None => Err(error::ErrorNotFound("no resource has been found.")),
+        },
         Err(_) => Err(error::ErrorInternalServerError("")),
     }
 }
