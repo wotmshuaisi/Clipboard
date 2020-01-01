@@ -1,5 +1,5 @@
 use actix_multipart::Multipart;
-use actix_web::{error, web, HttpResponse};
+use actix_web::{error, web, HttpMessage, HttpRequest, HttpResponse};
 use serde_json::json;
 
 use crate::api;
@@ -11,6 +11,7 @@ use crate::utils;
 /* Handlers */
 
 pub async fn upload_clipboard_files(
+    req: HttpRequest,
     h: web::Data<api::HandlerState>,
     payload: Multipart,
 ) -> Result<HttpResponse, error::Error> {
@@ -37,9 +38,15 @@ pub async fn upload_clipboard_files(
             if c.is_none() {
                 return Err(error::ErrorNotFound("no resource has been found."));
             }
-            if c.unwrap().is_set {
+            let c = c.unwrap();
+            if c.is_set {
                 return Err(error::ErrorBadRequest(
                     "this clipboard has already been setup.",
+                ));
+            }
+            if req.cookie("token").is_none() || req.cookie("token").unwrap().value() != &c.token {
+                return Err(error::ErrorBadRequest(
+                    "you don't have permission to edit this clipboard.",
                 ));
             }
         }
