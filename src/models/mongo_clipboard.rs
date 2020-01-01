@@ -47,8 +47,9 @@ pub struct SetClipboard {
     pub is_lock: bool,
     pub password: Option<String>,
     pub expire_date: i64,
+    pub attachments_url: Option<Vec<String>>,
     // pub uid: Option<String>,
-    // pub syntx_lang: Option<String>,
+    // pub syntx_lang: Option<String>
 }
 
 pub struct GetClipboard {
@@ -65,6 +66,8 @@ pub struct Clipboard {
     pub clip_onetime: bool,
     pub expire_date: i64,
     pub date_time: i64,
+    pub token: String,
+    pub attachments_url: Option<Vec<String>>,
     #[serde(skip_serializing)]
     pub is_lock: bool,
     #[serde(skip_serializing)]
@@ -96,16 +99,18 @@ impl Clipboard {
 /* Models trait implement */
 
 impl models::ClipboardModel for models::ModelHandler {
-    fn create_clipboard(&self) -> Result<String, Box<dyn Error>> {
+    fn create_clipboard(&self) -> Result<(String, String), Box<dyn Error>> {
         let cid = nanoid::custom(5, &ID_ALPHABETS);
+        let token = nanoid::generate(16);
         match self.db.collection(CLIPBOARD_COLLECTION_NAME).insert_one(
             doc! {
                 "id": &cid,
                 "is_set": false,
+                "token": &token,
             },
             None,
         ) {
-            Ok(_) => Ok(cid),
+            Ok(_) => Ok((cid, token)),
             Err(err) => {
                 self.err_log("ClipboardModel create_clipboard", -1, &err.to_string());
                 Err(Box::new(err))
@@ -135,7 +140,10 @@ impl models::ClipboardModel for models::ModelHandler {
                 return Err(err);
             }
         };
-
+        // let url = match c.attachments_url {
+        //     Some(val) => val.iter().map(|x| bson!(x)).collect::<Vec<Bson>>(),
+        //     None => bson!(Vec::new()),
+        // };
         match self.db.collection(CLIPBOARD_COLLECTION_NAME).update_one(
             doc! {
                 "id": c.id,
@@ -156,6 +164,10 @@ impl models::ClipboardModel for models::ModelHandler {
                     .duration_since( UNIX_EPOCH)
                     .unwrap()
                     .as_secs() as i64,
+                    "attachments_url": match c.attachments_url {
+            Some(val) => val.iter().map(|x| bson!(x)).collect::<Vec<Bson>>(),
+            None => bson!(Vec::new()),
+        },
                     "clip_type": c.clip_type as i32,
                     "is_set": true,
                 },
@@ -223,6 +235,17 @@ impl models::ClipboardModel for models::ModelHandler {
                             item.get_str("password")
                                 .unwrap_or_else(|_| Default::default()),
                         ),
+                        token: String::from(
+                            item.get_str("token").unwrap_or_else(|_| Default::default()),
+                        ),
+                        attachments_url: match item.get_array("attachments_url") {
+                            Ok(val) => Some(
+                                val.iter()
+                                    .map(|x| String::from(x.as_str().unwrap()))
+                                    .collect(),
+                            ),
+                            Err(_) => None,
+                        },
                         clip_content: match item.get_binary_generic("clip_content") {
                             Ok(val) => {
                                 let iv = item.get_str("iv");
@@ -281,12 +304,17 @@ fn clipboard_test() {
 
     // assert_ne!(result, "");
 
-    // // password content
+    // password content
     let pass = "password";
     let taskid = m.create_clipboard().unwrap();
 
+    let mut array = Vec::new();
+    array.push(String::from("test"));
+    array.push(String::from("test1"));
+    array.push(String::from("test2"));
+
     m.set_clipboard(SetClipboard {
-        id: String::from(&taskid),
+        id: String::from(&taskid.0),
         clip_content: String::from("test 1"),
         clip_onetime: true,
         clip_type: ClipboardType::Normal,
@@ -297,17 +325,18 @@ fn clipboard_test() {
             .unwrap()
             .as_secs() as i64
             + (5 * 24 * 3600) as i64,
+        attachments_url: Some(array),
     })
     .unwrap();
 
-    assert_ne!(&taskid, "");
+    assert_ne!(&taskid.0, "");
 
     // retrieve clipboard
     let doc = m
         .retrieve_clipboard(GetClipboard {
-            id: String::from(&taskid),
+            id: String::from(&taskid.0),
             expire_check: false,
-            is_set: false,
+            is_set: true,
         })
         .unwrap();
     if let Some(doc) = doc {
@@ -316,10 +345,10 @@ fn clipboard_test() {
         assert_eq!(true, doc.is_lock);
         assert_ne!(0, doc.date_time);
         assert_eq!(doc.clip_type as u8, 1);
+        println!("test === {:?}", doc.attachments_url);
     }
-
-    // // delete clipboard
-    let result = m.destroy_clipboard(&taskid);
+    // delete clipboard
+    let result = m.destroy_clipboard(&taskid.0);
 
     assert_eq!(result.is_ok(), true);
 }

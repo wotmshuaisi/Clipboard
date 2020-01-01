@@ -1,4 +1,4 @@
-use actix_web::{error, web, HttpResponse};
+use actix_web::{error, http, web, HttpMessage, HttpRequest, HttpResponse};
 use serde_derive::Deserialize;
 use serde_json::json;
 use std::time::SystemTime;
@@ -19,6 +19,7 @@ pub struct SetClipboardReq {
     pub cliptype: u8,
     #[serde(default = "default_expire_date")]
     pub expire_date: u64,
+    pub attachments_url: Option<Vec<String>>,
 }
 
 #[derive(Default, Clone, Debug, Deserialize)]
@@ -32,12 +33,21 @@ pub async fn create_clipboard(
     h: web::Data<api::HandlerState>,
 ) -> Result<HttpResponse, error::Error> {
     match h.model.create_clipboard() {
-        Ok(id) => Ok(HttpResponse::Created().json(json!({ "id": id }))),
+        Ok(val) => Ok(HttpResponse::Created()
+            .cookie(
+                http::Cookie::build("token", val.1)
+                    .path("/")
+                    .secure(true)
+                    .http_only(false)
+                    .finish(),
+            )
+            .json(json!( {"id": val.0}))),
         Err(_) => Err(error::ErrorInternalServerError("")),
     }
 }
 
 pub async fn set_clipboard(
+    req: HttpRequest,
     h: web::Data<api::HandlerState>,
     item: web::Json<SetClipboardReq>,
 ) -> Result<HttpResponse, error::Error> {
@@ -76,9 +86,15 @@ pub async fn set_clipboard(
             if c.is_none() {
                 return Err(error::ErrorNotFound("no resource has been found."));
             }
-            if c.unwrap().is_set {
+            let c = c.unwrap();
+            if c.is_set {
                 return Err(error::ErrorBadRequest(
                     "this clipboard has already been setup.",
+                ));
+            }
+            if req.cookie("token").is_none() || req.cookie("token").unwrap().value() != &c.token {
+                return Err(error::ErrorBadRequest(
+                    "you don't have permission to edit this clipboard.",
                 ));
             }
         }
@@ -101,6 +117,10 @@ pub async fn set_clipboard(
             None => None,
         },
         expire_date: item.expire_date as i64,
+        attachments_url: match &item.attachments_url {
+            Some(val) => Some(val.to_vec()),
+            None => None,
+        },
     }) {
         Ok(()) => Ok(HttpResponse::NoContent().finish()),
         Err(_) => Err(error::ErrorInternalServerError("")),

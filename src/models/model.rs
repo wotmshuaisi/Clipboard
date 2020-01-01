@@ -7,7 +7,7 @@ use crate::models;
 /* Interface & Structures */
 
 pub trait ClipboardModel {
-    fn create_clipboard(&self) -> Result<String, Box<dyn Error>>;
+    fn create_clipboard(&self) -> Result<(String, String), Box<dyn Error>>;
     fn set_clipboard(&self, c: models::SetClipboard) -> Result<(), Box<dyn Error>>;
     fn destroy_clipboard(&self, id: &str) -> Result<(), Box<dyn Error>>;
     fn retrieve_clipboard(
