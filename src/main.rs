@@ -1,3 +1,4 @@
+use actix_cors::Cors;
 use actix_rt;
 use actix_web::{App, HttpServer};
 use mongodb::db::ThreadedDatabase;
@@ -56,6 +57,7 @@ async fn main() -> std::io::Result<()> {
     );
     HttpServer::new(move || {
         App::new()
+            .wrap(Cors::new().finish())
             .wrap(logging::Logging::new(logger.clone()))
             .data(api::HandlerState {
                 model: model_handler.clone(),
