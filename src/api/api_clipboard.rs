@@ -37,7 +37,7 @@ pub async fn create_clipboard(
             .cookie(
                 http::Cookie::build("token", val.1)
                     .path("/")
-                    .secure(true)
+                    .secure(false)
                     .http_only(false)
                     .finish(),
             )
@@ -92,11 +92,11 @@ pub async fn set_clipboard(
                     "this clipboard has already been setup.",
                 ));
             }
-            if req.cookie("token").is_none() || req.cookie("token").unwrap().value() != &c.token {
-                return Err(error::ErrorBadRequest(
-                    "you don't have permission to edit this clipboard.",
-                ));
-            }
+            // if req.cookie("token").is_none() || req.cookie("token").unwrap().value() != &c.token {
+            //     return Err(error::ErrorBadRequest(
+            //         "you don't have permission to edit this clipboard.",
+            //     ));
+            // }
         }
         Err(_) => {
             return Err(error::ErrorInternalServerError(""));
@@ -134,7 +134,7 @@ pub async fn retrieve_clipboard(
 ) -> Result<HttpResponse, error::Error> {
     match h.model.retrieve_clipboard(GetClipboard {
         id: path.0.to_lowercase(),
-        expire_check: true,
+        expire_check: false,
         is_set: true,
     }) {
         Ok(val) => match val {
@@ -158,11 +158,13 @@ pub async fn retrieve_clipboard(
                 }
                 // remove item if it's one-time clipboard
                 if c.clip_onetime {
-                    h.model.destroy_clipboard(&c.id).unwrap();
+                    if let Err(_) = h.model.destroy_clipboard(&c.id) {};
                 }
-                Ok(HttpResponse::Ok().json(c))
+                return Ok(HttpResponse::Ok().json(c));
             }
-            None => Err(error::ErrorNotFound("no resource has been found.")),
+            None => {
+                return Err(error::ErrorNotFound("no resource has been found."));
+            }
         },
         Err(_) => Err(error::ErrorInternalServerError("")),
     }
@@ -174,7 +176,7 @@ pub async fn islock_clipboard(
 ) -> Result<HttpResponse, error::Error> {
     match h.model.retrieve_clipboard(GetClipboard {
         id: path.0.to_lowercase(),
-        expire_check: true,
+        expire_check: false,
         is_set: true,
     }) {
         Ok(val) => match val {

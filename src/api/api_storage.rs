@@ -44,11 +44,11 @@ pub async fn upload_clipboard_files(
                     "this clipboard has already been setup.",
                 ));
             }
-            if req.cookie("token").is_none() || req.cookie("token").unwrap().value() != &c.token {
-                return Err(error::ErrorBadRequest(
-                    "you don't have permission to edit this clipboard.",
-                ));
-            }
+            // if req.cookie("token").is_none() || req.cookie("token").unwrap().value() != &c.token {
+            //     return Err(error::ErrorBadRequest(
+            //         "you don't have permission to edit this clipboard.",
+            //     ));
+            // }
         }
         Err(_) => {
             return Err(error::ErrorInternalServerError(""));

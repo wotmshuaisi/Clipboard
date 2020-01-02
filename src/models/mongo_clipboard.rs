@@ -272,10 +272,9 @@ impl models::ClipboardModel for models::ModelHandler {
                         self.destroy_clipboard(&c.id)?;
                         return Ok(None);
                     }
-                    Ok(Some(c))
-                } else {
-                    Ok(None)
+                    return Ok(Some(c));
                 }
+                Ok(None)
             }
             Err(err) => {
                 self.err_log("ClipboardModel retrieve_clipboard", 0, &err.to_string());
