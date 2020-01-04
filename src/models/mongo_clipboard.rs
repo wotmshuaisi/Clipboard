@@ -89,7 +89,7 @@ impl Clipboard {
         false
     }
     pub fn password_valid(&self, password: &str) -> bool {
-        match bcrypt::verify(&self.password, password) {
+        match bcrypt::verify(password, &self.password) {
             Ok(val) => val,
             Err(_) => false,
         }
@@ -123,7 +123,9 @@ impl models::ClipboardModel for models::ModelHandler {
         let clip_content_encrypted: Vec<u8>;
         if c.is_lock {
             match bcrypt::hash(c.password.unwrap(), 4) {
-                Ok(pass) => c.password = Some(pass),
+                Ok(pass) => {
+                    c.password = Some(pass);
+                }
                 Err(err) => {
                     self.err_log("ClipboardModel create_clipboard", -1, &err.to_string());
                     return Err(Box::new(err));
@@ -338,6 +340,7 @@ fn clipboard_test() {
             is_set: true,
         })
         .unwrap();
+
     if let Some(doc) = doc {
         assert_ne!("", &doc.id);
         assert_eq!("test 1", &doc.clip_content);
@@ -345,6 +348,7 @@ fn clipboard_test() {
         assert_ne!(0, doc.date_time);
         assert_eq!(doc.clip_type as u8, 1);
         println!("test === {:?}", doc.attachments_url);
+        assert_eq!(true, doc.password_valid("password"));
     }
     // delete clipboard
     let result = m.destroy_clipboard(&taskid.0);

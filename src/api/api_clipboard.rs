@@ -146,11 +146,11 @@ pub async fn retrieve_clipboard(
                         Some(val) => {
                             // password validator
                             if !c.password_valid(&val) {
-                                return Err(error::ErrorBadRequest("wrong password."));
+                                return Err(error::ErrorForbidden("wrong password."));
                             }
                         }
                         _ => {
-                            return Err(error::ErrorBadRequest(
+                            return Err(error::ErrorForbidden(
                                 "password is required for this clipboard.",
                             ));
                         }
