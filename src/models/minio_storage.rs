@@ -1,6 +1,6 @@
 use nanoid::generate;
 use std::error::Error;
-use std::fs::{copy, create_dir_all, remove_dir_all};
+use std::fs::{create_dir_all, remove_dir_all, rename};
 
 use crate::models;
 
@@ -16,19 +16,22 @@ impl models::StorageModel for models::ModelHandler {
         }
         let random_file_name = generate(3) + "_" + file_name;
 
-        create_dir_all(String::from(&self.minio_public_path) + folder)?;
+        if let Err(err) = create_dir_all(String::from(&self.minio_public_path) + folder) {
+            self.err_log("StorageModel save_to_minio", 1, &err.to_string());
+            return Err(Box::new(err));
+        }
 
         let url_file_path = format!("{}/{}", folder, random_file_name);
-
-        if let Err(err) = copy(
+        println!("{}", url_file_path);
+        if let Err(err) = rename(
             source,
             String::from(&self.minio_public_path) + &url_file_path,
         ) {
-            self.err_log("StorageModel save_to_minio", 1, &err.to_string());
+            self.err_log("StorageModel save_to_minio", 2, &err.to_string());
             return Err(Box::new(err));
         };
 
-        Ok(String::from(&self.minio_cdn_prefix) + &url_file_path)
+        Ok(String::from(&self.storage_access_prefix) + &url_file_path)
     }
 
     fn remove_minio_folder(&self, path: &str) -> Result<(), Box<dyn Error>> {

@@ -66,6 +66,7 @@ pub struct Clipboard {
     pub clip_onetime: bool,
     pub expire_date: i64,
     pub date_time: i64,
+    #[serde(skip_serializing)]
     pub token: String,
     pub attachments_url: Option<Vec<String>>,
     #[serde(skip_serializing)]
@@ -142,10 +143,6 @@ impl models::ClipboardModel for models::ModelHandler {
                 return Err(err);
             }
         };
-        // let url = match c.attachments_url {
-        //     Some(val) => val.iter().map(|x| bson!(x)).collect::<Vec<Bson>>(),
-        //     None => bson!(Vec::new()),
-        // };
         match self.db.collection(CLIPBOARD_COLLECTION_NAME).update_one(
             doc! {
                 "id": c.id,
@@ -186,7 +183,7 @@ impl models::ClipboardModel for models::ModelHandler {
         }
     }
 
-    fn destroy_clipboard(&self, id: &str) -> Result<(), Box<dyn Error>> {
+    fn destroy_clipboard(&self, id: &str, files: bool) -> Result<(), Box<dyn Error>> {
         match self.db.collection(CLIPBOARD_COLLECTION_NAME).delete_one(
             doc! {
                 "id": id,
@@ -197,7 +194,9 @@ impl models::ClipboardModel for models::ModelHandler {
                 if val.deleted_count == 0 {
                     self.warn_log("ClipboardModel destroy_clipboard", 0);
                 }
-                self.remove_minio_folder(&(String::from("clipboard/") + id))?;
+                if files {
+                    self.remove_minio_folder(&(String::from("clipboard/") + id))?;
+                }
                 Ok(())
             }
             Err(err) => Err(Box::new(err)),
@@ -271,7 +270,7 @@ impl models::ClipboardModel for models::ModelHandler {
                         },
                     };
                     if opt.expire_check && c.is_expired() {
-                        self.destroy_clipboard(&c.id)?;
+                        self.destroy_clipboard(&c.id, true)?;
                         return Ok(None);
                     }
                     return Ok(Some(c));
@@ -351,7 +350,7 @@ fn clipboard_test() {
         assert_eq!(true, doc.password_valid("password"));
     }
     // delete clipboard
-    let result = m.destroy_clipboard(&taskid.0);
+    let result = m.destroy_clipboard(&taskid.0, true);
 
     assert_eq!(result.is_ok(), true);
 }

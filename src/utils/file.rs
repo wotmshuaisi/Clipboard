@@ -5,13 +5,14 @@ use std::collections::HashMap;
 use std::io::Write;
 
 pub async fn multipart_processor(
-    tmp_path: String,
+    tmp_path: &str,
     file_field: &str,
     mut payload: Multipart,
+    limit_files: u8,
 ) -> Result<HashMap<String, String>, actix_multipart::MultipartError> {
     let mut result: HashMap<String, String> = HashMap::new();
     let mut files = String::from("");
-
+    let mut index: u8 = 1;
     while let Some(item) = payload.next().await {
         let mut field = item?;
         let content_disposition = field.content_disposition().unwrap();
@@ -30,11 +31,14 @@ pub async fn multipart_processor(
             }
             continue;
         }
+        if limit_files != 0 && index > limit_files {
+            break;
+        }
         let file_name = match content_disposition.get_filename() {
             Some(val) => val,
             None => continue,
         };
-        let path = tmp_path.clone() + &nanoid::simple();
+        let path = format!("{}{}", tmp_path, nanoid::simple());
         files = files + file_name + "|" + &path + "||";
 
         let mut f = web::block(|| std::fs::File::create(path)).await.unwrap();
@@ -44,6 +48,7 @@ pub async fn multipart_processor(
                 .await
                 .unwrap();
         }
+        index = index + 1;
     }
 
     if !files.is_empty() {

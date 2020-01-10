@@ -18,10 +18,11 @@ Todo List:
 
 */
 
-#[derive(Debug)]
 pub struct HandlerState {
     pub model: models::ModelHandler,
     pub temp_path: String,
+    pub minio_storage_prefix: String,
+    pub proxy_client: actix_web::client::Client,
 }
 
 pub fn set_api_router(cfg: &mut web::ServiceConfig) {
@@ -45,12 +46,25 @@ pub fn set_api_router(cfg: &mut web::ServiceConfig) {
                     .service(
                         web::scope("/clipboard")
                             .route("", web::get().to(|| web::HttpResponse::MethodNotAllowed()))
-                            // .route(
-                            //     "/{taskid}/{filename}",
-                            //     web::get().to(api::get_clipboard_file),
-                            // )
-                            .route("", web::post().to(api::upload_clipboard_files)),
+                            .route(
+                                "/{taskid}/{filename}",
+                                web::get().to(api::get_clipboard_file),
+                            )
+                            .data(web::PayloadConfig::default().limit(400000000)) // 400 mb
+                            .route("/images", web::post().to(api::upload_clipboard_files))
+                            .route("/attachments", web::post().to(api::upload_clipboard_files)),
                     ),
             ),
     );
+}
+
+impl HandlerState {
+    pub fn minio_clipboard_url(&self, id: &str, file: &str) -> String {
+        return format!(
+            "{}clipboard/{}/{}",
+            String::from(&self.minio_storage_prefix),
+            id,
+            file
+        );
+    }
 }
