@@ -68,7 +68,7 @@ where
             let res = svc.call(req).await?;
 
             let log = format!(
-                "[clientip: {}] [method: {}] [url: {}] [status: {}] [latency: {}]",
+                "[clientip: {}] [method: {}] [url: {}] [status: {}] [latency: {:.4}]",
                 match res.request().connection_info().remote() {
                     Some(val) => val,
                     None => "unknown",
@@ -76,8 +76,8 @@ where
                 res.request().method(),
                 res.request().uri(),
                 res.status().as_u16(),
-                match (chrono::Utc::now() - start_time).num_nanoseconds() {
-                    Some(val) => val as f64 / 1000000.0,
+                match (chrono::Utc::now() - start_time).num_microseconds() {
+                    Some(val) => (val as f64 / 1000000.0),
                     _ => 0.0 as f64,
                 }
             );

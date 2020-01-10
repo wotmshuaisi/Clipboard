@@ -9,7 +9,7 @@ use crate::models;
 pub trait ClipboardModel {
     fn create_clipboard(&self) -> Result<(String, String), Box<dyn Error>>;
     fn set_clipboard(&self, c: models::SetClipboard) -> Result<(), Box<dyn Error>>;
-    fn destroy_clipboard(&self, id: &str) -> Result<(), Box<dyn Error>>;
+    fn destroy_clipboard(&self, id: &str, files: bool) -> Result<(), Box<dyn Error>>;
     fn retrieve_clipboard(
         &self,
         opt: models::GetClipboard,
@@ -32,14 +32,14 @@ pub struct ModelHandler {
     pub logger: slog::Logger,
     pub key: Vec<u8>,
     pub minio_public_path: String,
-    pub minio_cdn_prefix: String,
+    pub storage_access_prefix: String,
 }
 
 pub struct ModelHandlerOptions {
     pub conn: mongodb::Client,
     pub key: String,
     pub minio_public_path: String,
-    pub minio_cdn_prefix: String,
+    pub storage_access_prefix: String,
 }
 
 /* Implement */
@@ -54,7 +54,7 @@ impl ModelHandler {
                 .unwrap()
                 .to_vec(),
             minio_public_path: opt.minio_public_path,
-            minio_cdn_prefix: opt.minio_cdn_prefix,
+            storage_access_prefix: opt.storage_access_prefix,
         }
     }
 }
@@ -87,6 +87,6 @@ pub fn initial_test_handler() -> ModelHandler {
         conn: client,
         key: String::from("test_salt"),
         minio_public_path: String::from(""),
-        minio_cdn_prefix: String::from(""),
+        storage_access_prefix: String::from(""),
     })
 }

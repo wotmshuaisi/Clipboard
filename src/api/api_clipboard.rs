@@ -65,10 +65,14 @@ pub async fn set_clipboard(
         .as_secs()
         + 600 as u64
         > item.expire_date
+        || item.expire_date
+            > SystemTime::now()
+                .duration_since(SystemTime::UNIX_EPOCH)
+                .unwrap()
+                .as_secs()
+                + 604800
     {
-        return Err(error::ErrorBadRequest(
-            "expiredate must greater than 10 minutes",
-        ));
+        return Err(error::ErrorBadRequest("invalid expire date value"));
     }
     let clip_type = match ClipboardType::from_u8(item.cliptype) {
         Some(val) => val,
@@ -92,11 +96,11 @@ pub async fn set_clipboard(
                     "this clipboard has already been setup.",
                 ));
             }
-            // if req.cookie("token").is_none() || req.cookie("token").unwrap().value() != &c.token {
-            //     return Err(error::ErrorBadRequest(
-            //         "you don't have permission to edit this clipboard.",
-            //     ));
-            // }
+            if req.cookie("token").is_none() || req.cookie("token").unwrap().value() != &c.token {
+                return Err(error::ErrorBadRequest(
+                    "you don't have permission to edit the resource.",
+                ));
+            }
         }
         Err(_) => {
             return Err(error::ErrorInternalServerError(""));
@@ -158,9 +162,17 @@ pub async fn retrieve_clipboard(
                 }
                 // remove item if it's one-time clipboard
                 if c.clip_onetime {
-                    if let Err(_) = h.model.destroy_clipboard(&c.id) {};
+                    if let Err(_) = h.model.destroy_clipboard(&c.id, c.is_expired()) {};
                 }
-                return Ok(HttpResponse::Ok().json(c));
+                return Ok(HttpResponse::Ok()
+                    .cookie(
+                        http::Cookie::build("token", String::from(&c.token))
+                            .path("/")
+                            .secure(false)
+                            .http_only(false)
+                            .finish(),
+                    )
+                    .json(c));
             }
             None => {
                 return Err(error::ErrorNotFound("no resource has been found."));
@@ -195,7 +207,7 @@ fn default_expire_date() -> u64 {
         .duration_since(SystemTime::UNIX_EPOCH)
         .unwrap()
         .as_secs()
-        + (3600 * 24)
+        + (1800)
 }
 
 fn default_clip_type() -> u8 {

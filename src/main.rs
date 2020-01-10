@@ -1,6 +1,7 @@
 use actix_cors::Cors;
+use actix_files::NamedFile;
 use actix_rt;
-use actix_web::{App, HttpServer};
+use actix_web::{web, App, HttpServer, Result};
 use mongodb::db::ThreadedDatabase;
 use mongodb::ThreadedClient;
 
@@ -22,8 +23,13 @@ const MONGO_ADDR: &str = "mongodb://127.0.0.1:27017/admin";
 const APP_SALT: &str = "saltforbcrypt";
 const LISTEN_ADDR: &str = "0.0.0.0:8000";
 const TEMP_PATH: &str = "tmp/";
-const MINIO_PUBLIC_PATH: &str = "tmp/minio/";
-const MINIO_URL_PREFIX: &str = "http://localhost:9001/public/";
+const MINIO_PUBLIC_PATH: &str = "s3/api/";
+const MINIO_URL_PREFIX: &str = "http://localhost:9001/api/";
+const STORAGE_ACCESS_PREFIX: &str = "http://localhost:8000/api/storage/";
+
+async fn index() -> Result<NamedFile> {
+    Ok(NamedFile::open("./html/index.html")?)
+}
 
 #[actix_rt::main]
 async fn main() -> std::io::Result<()> {
@@ -35,6 +41,7 @@ async fn main() -> std::io::Result<()> {
     let env_temp_path = utils::get_env("TEMP_PATH", TEMP_PATH);
     let env_minio_public_path = utils::get_env("MINIO_PUBLIC_PATH", MINIO_PUBLIC_PATH);
     let env_minio_url_prefix = utils::get_env("MINIO_URL_PREFIX", MINIO_URL_PREFIX);
+    let env_storage_access_prefix = utils::get_env("STORAGE_ACCESS_PREFIX", STORAGE_ACCESS_PREFIX);
     let env_mode = |x: String| -> String {
         if &x == RELEASE_MODE {
             return x;
@@ -48,7 +55,7 @@ async fn main() -> std::io::Result<()> {
         conn: mongo_client.clone(),
         key: env_app_salt,
         minio_public_path: env_minio_public_path,
-        minio_cdn_prefix: env_minio_url_prefix,
+        storage_access_prefix: env_storage_access_prefix,
     });
     /* Operations */
     info!(
@@ -57,11 +64,16 @@ async fn main() -> std::io::Result<()> {
     );
     HttpServer::new(move || {
         App::new()
+            .route("/", web::get().to(index))
+            .route("/p/{id:.*}", web::get().to(index))
+            .service(actix_files::Files::new("/statics", "./html/statics").show_files_listing())
             .wrap(Cors::new().finish())
             .wrap(logging::Logging::new(logger.clone()))
             .data(api::HandlerState {
                 model: model_handler.clone(),
                 temp_path: env_temp_path.clone(),
+                minio_storage_prefix: env_minio_url_prefix.clone(),
+                proxy_client: actix_web::client::Client::new(),
             })
             .configure(api::set_api_router)
     })
