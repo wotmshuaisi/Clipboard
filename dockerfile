@@ -14,12 +14,12 @@ RUN cargo install --path .
 
 FROM alpine:latest
 
-COPY --from=cargo-build /usr/local/cargo/bin/clipboard /usr/local/bin/clipboard
-
 RUN mkdir -p /server/html && mkdir -p /server/log
+
+COPY --from=cargo-build /usr/local/cargo/bin/clipboard /server/
 
 COPY --from=cargo-build /tmp/clipboard/html/ /server/
 
 WORKDIR /server/
 
-CMD ["clipboard"]
+CMD ["./clipboard"]
