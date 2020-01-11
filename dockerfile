@@ -6,7 +6,7 @@ WORKDIR /tmp/clipboard
 
 COPY . .
 
-RUN cd ./html/ && tar zxvf ./html/html.tar.gz && rm -rf ./html.tar.gz
+RUN cd ./html && tar zxvf ./html.tar.gz && rm -rf ./html.tar.gz
 
 RUN cargo build --release
 
