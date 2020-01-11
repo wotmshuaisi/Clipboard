@@ -1,7 +1,7 @@
 FROM rust:stretch as builder
 
 RUN apt-get update \
-    && apt-get -y install tar ca-certificates cmake musl-tools libssl-dev \
+    && apt-get -y install tar ca-certificates cmake musl-tools pkg-config libssl-dev \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /tmp/clipboard
