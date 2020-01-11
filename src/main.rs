@@ -19,7 +19,10 @@ extern crate slog_term;
 const DEFAULT_LOG_PATH: &str = "./log/";
 const DEBUG_MODE: &str = "DEBUG";
 const RELEASE_MODE: &str = "RELEASE";
-const MONGO_ADDR: &str = "mongodb://127.0.0.1:27017/admin";
+const MONGO_ADDR: &str = "localhost";
+const MONGO_PORT: &str = "27017";
+const MONGO_USER: &str = "";
+const MONGO_PASS: &str = "";
 const APP_SALT: &str = "saltforbcrypt";
 const LISTEN_ADDR: &str = "0.0.0.0:8000";
 const TEMP_PATH: &str = "tmp/";
@@ -36,6 +39,11 @@ async fn main() -> std::io::Result<()> {
     /* Variables */
     let env_log_path = utils::get_env("LOG_PATH", DEFAULT_LOG_PATH);
     let env_mongo_addr = utils::get_env("MONGO_ADDR", MONGO_ADDR);
+    let env_mongo_port = utils::get_env("MONGO_PORT", MONGO_PORT)
+        .parse::<u16>()
+        .unwrap();
+    let env_mongo_user = utils::get_env("MONGO_USER", MONGO_USER);
+    let env_mongo_pass = utils::get_env("MONGO_PASS", MONGO_PASS);
     let env_app_salt = utils::get_env("APP_SALT", APP_SALT);
     let env_listen_addr = utils::get_env("LISTEN_ADDR", LISTEN_ADDR);
     let env_temp_path = utils::get_env("TEMP_PATH", TEMP_PATH);
@@ -50,7 +58,12 @@ async fn main() -> std::io::Result<()> {
     }(utils::get_env("MODE", DEBUG_MODE).to_uppercase());
     /* Initialization */
     let (_guard, logger) = initial_logger(&env_mode, &env_log_path);
-    let mongo_client = initial_mongo(&env_mongo_addr);
+    let mongo_client = initial_mongo(
+        &env_mongo_addr,
+        env_mongo_port,
+        &env_mongo_user,
+        &env_mongo_pass,
+    );
     let model_handler = models::ModelHandler::new(models::ModelHandlerOptions {
         conn: mongo_client.clone(),
         key: env_app_salt,
@@ -102,8 +115,18 @@ fn initial_logger(mode: &str, log_path: &str) -> (slog_scope::GlobalLoggerGuard,
     }
 }
 
-fn initial_mongo(mongo_addr: &str) -> mongodb::Client {
-    let client = mongodb::Client::with_uri(mongo_addr).unwrap();
+fn initial_mongo(
+    mongo_addr: &str,
+    mongo_port: u16,
+    mongo_user: &str,
+    mongo_pass: &str,
+) -> mongodb::Client {
+    let client = mongodb::Client::connect(mongo_addr, mongo_port).unwrap();
+    if !mongo_user.is_empty() {
+        if let Err(err) = client.db("admin").auth(mongo_user, mongo_pass) {
+            panic!("[initial_mongo] 0 {}", err);
+        }
+    }
     // test connection
     match client.db("clipboard").version() {
         Ok(version) => {
@@ -113,7 +136,7 @@ fn initial_mongo(mongo_addr: &str) -> mongodb::Client {
             );
         }
         Err(err) => {
-            panic!("[initial_mongo] {}", err);
+            panic!("[initial_mongo] 1 {}", err);
         }
     };
     client

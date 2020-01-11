@@ -50,7 +50,7 @@ impl ModelHandler {
         ModelHandler {
             db: opt.conn.db("clipboard"),
             logger: slog_scope::logger(),
-            key: hash(MessageDigest::sha256(), opt.key.as_bytes())
+            key: hash(MessageDigest::sha3_256(), opt.key.as_bytes())
                 .unwrap()
                 .to_vec(),
             minio_public_path: opt.minio_public_path,

@@ -213,6 +213,11 @@ impl models::ClipboardModel for models::ModelHandler {
         ) {
             Ok(val) => {
                 if let Some(item) = val {
+                    if !item.get("$err").is_none() {
+                        let err = item.get_str("$err").unwrap();
+                        self.err_log("ClipboardModel retrieve_clipboard", -1, err);
+                        return Ok(None);
+                    }
                     let c = Clipboard {
                         id: String::from(String::from(item.get_str("id").unwrap())),
                         is_set: item.get_bool("is_set").unwrap(),
