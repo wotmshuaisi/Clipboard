@@ -78,7 +78,7 @@ async fn main() -> std::io::Result<()> {
             .configure(api::set_api_router)
     })
     .bind(env_listen_addr)?
-    .start()
+    .run()
     .await
 }
 
