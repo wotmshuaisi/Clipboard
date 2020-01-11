@@ -1,0 +1,11 @@
+language: minimal
+services:
+- docker
+env:
+  global:
+  - DOCKER_REPO=wotmshuaisi/clipboard
+  - DOCKER_REPO_LATEST=wotmshuaisi/clipboard:latest
+script:
+- echo "---- Docker Login ----" && echo "${DOCKERPASSWORDENV}" | docker login -u "${DOCKERUSERENV}" --password-stdin
+- echo "---- Building ----" && cd ./agent && docker build -t ${DOCKER_REPO_LATEST} .
+- echo "---- Pushing ----" && docker push ${DOCKER_REPO_LATEST}
