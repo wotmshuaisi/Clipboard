@@ -1,4 +1,4 @@
-FROM ekidd/rust-musl-builder:stable
+FROM ekidd/rust-musl-builder:stable AS builder
 
 WORKDIR /usr/src/app
 
@@ -15,9 +15,15 @@ FROM alpine:latest
 
 RUN mkdir -p /server/html && mkdir -p /server/log
 
+RUN apk add tar
+
 COPY --from=builder /usr/src/app/target/x86_64-unknown-linux-musl/release/clipboard /server/
 COPY --from=builder /usr/src/app/html/frontend.tar.gz /server/
 
 WORKDIR /server/
+
+RUN cd html && tar zxvf frontend.tar.gz
+
+RUN apk del tar && rm -rf /var/cache/apk/*
 
 CMD ["./clipboard"]
