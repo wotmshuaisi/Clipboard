@@ -18,11 +18,11 @@ RUN mkdir -p /server/html && mkdir -p /server/log
 RUN apk add tar
 
 COPY --from=builder /usr/src/app/target/x86_64-unknown-linux-musl/release/clipboard /server/
-COPY --from=builder /usr/src/app/html/frontend.tar.gz /server/
+COPY --from=builder /usr/src/app/html/html.tar.gz /server/
 
 WORKDIR /server/
 
-RUN cd html && tar zxvf frontend.tar.gz
+RUN cd html && tar zxvf html.tar.gz
 
 RUN apk del tar && rm -rf /var/cache/apk/*
 
