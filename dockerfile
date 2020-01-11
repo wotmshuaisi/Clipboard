@@ -1,6 +1,6 @@
 FROM rust:alpine3.10 as cargo-build
 
-RUN apt-get update && apt-get install -y tar
+RUN apk update && apk add tar
 
 WORKDIR /tmp/clipboard
 
