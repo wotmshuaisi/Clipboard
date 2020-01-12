@@ -22,7 +22,7 @@ COPY --from=builder /usr/src/app/html/html.tar.gz /server/html
 
 WORKDIR /server/
 
-RUN cd html && tar zxvf html.tar.gz
+RUN cd html && tar zxvf html.tar.gz && rm -rf html.tar.gz
 
 RUN apk del tar && rm -rf /var/cache/apk/*
 
