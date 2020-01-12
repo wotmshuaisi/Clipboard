@@ -136,15 +136,13 @@ pub async fn get_clipboard_file(
         .await
         .map_err(Error::from)?;
 
-    let mut res = HttpResponse::build(client_res.status());
-
+    let mut res = HttpResponse::Ok();
     for (key, value) in client_res
         .headers()
         .iter()
-        .filter(|(h, _)| *h != "connection")
+        .filter(|(h, _)| *h == "content-type")
     {
         res.header(key.clone(), value.clone());
     }
-
     Ok(res.body(client_res.body().await?))
 }

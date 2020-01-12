@@ -86,7 +86,9 @@ async fn main() -> std::io::Result<()> {
                 model: model_handler.clone(),
                 temp_path: env_temp_path.clone(),
                 minio_storage_prefix: env_minio_url_prefix.clone(),
-                proxy_client: actix_web::client::Client::new(),
+                proxy_client: actix_web::client::ClientBuilder::new()
+                    .disable_timeout()
+                    .finish(),
             })
             .configure(api::set_api_router)
     })
