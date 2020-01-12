@@ -37,7 +37,6 @@ pub fn set_api_router(cfg: &mut web::ServiceConfig) {
                             .route("/is_lock", web::get().to(api::islock_clipboard)),
                     )
                     .route("", web::post().to(api::create_clipboard))
-                    .data(web::JsonConfig::default().limit(6000000)) // maximum body size is 6mb
                     .route("", web::put().to(api::set_clipboard)),
             )
             .service(
@@ -50,7 +49,6 @@ pub fn set_api_router(cfg: &mut web::ServiceConfig) {
                                 "/{taskid}/{filename}",
                                 web::get().to(api::get_clipboard_file),
                             )
-                            .data(web::PayloadConfig::default().limit(400000000)) // 400 mb
                             .route("/images", web::post().to(api::upload_clipboard_files))
                             .route("/attachments", web::post().to(api::upload_clipboard_files)),
                     ),
