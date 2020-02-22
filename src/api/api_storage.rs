@@ -137,12 +137,22 @@ pub async fn get_clipboard_file(
         .map_err(Error::from)?;
 
     let mut res = HttpResponse::Ok();
+    let mut content_length: usize = 0;
     for (key, value) in client_res
         .headers()
         .iter()
         .filter(|(h, _)| *h == "content-type")
     {
+        if key == "content-length" {
+            content_length = value
+                .to_str()
+                .unwrap()
+                .to_string()
+                .parse::<usize>()
+                .unwrap();
+        }
         res.header(key.clone(), value.clone());
     }
-    Ok(res.body(client_res.body().await?))
+
+    Ok(res.body(client_res.body().limit(content_length).await?))
 }
