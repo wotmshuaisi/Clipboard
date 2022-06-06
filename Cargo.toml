@@ -9,7 +9,7 @@ edition = "2018"
 [dependencies]
 actix-rt = "1.0.0"
 actix-web = "2.0.0"
-actix-service = "1.0.0"
+actix-service = "2.0.2"
 actix-multipart ="0.2.0"
 futures = "0.3.1"
 # listenfd = "0.3.3"
