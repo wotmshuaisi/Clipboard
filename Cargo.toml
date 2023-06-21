@@ -24,7 +24,7 @@ serde_derive = "1.0.103"
 mongodb = { package = "mongodb_cwal", version = "0.4" }
 nanoid = "0.2.0"
 bcrypt = "0.6.1"
-openssl = "0.10.26"
+openssl = "0.10.55"
 json = "0.12.0"
 actix-cors = "0.2.0"
 actix-files = "0.2.1"
